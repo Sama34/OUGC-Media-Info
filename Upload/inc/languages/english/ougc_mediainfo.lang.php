@@ -36,5 +36,23 @@ $l['ougc_mediainfo_input_desc'] = 'Insert the the IMDB link to the media you wan
 $l['ougc_mediainfo_input_placeholder'] = 'https://www.imdb.com/title/tt4154796/';
 
 $l['ougc_mediainfo_error_nomatch'] = 'The IMDB link doesn\'s match the pattern. Please verify the provided IMDB link.';
-
 $l['ougc_mediainfo_error_apikey'] = 'There was an error fetching the necessary data from the OMDb database. Please contact a moderator or administrator.';
+
+$l['ougc_mediainfo_field_year'] = 'Year:';
+$l['ougc_mediainfo_field_metascore'] = 'Meta:';
+$l['ougc_mediainfo_field_imdbvotes'] = 'Votes:';
+$l['ougc_mediainfo_field_released'] = 'Release date:';
+$l['ougc_mediainfo_field_title'] = 'Title:';
+$l['ougc_mediainfo_field_rated'] = 'Rate:';
+$l['ougc_mediainfo_field_runtime'] = 'Run time:';
+$l['ougc_mediainfo_field_genre'] = 'Genre:';
+$l['ougc_mediainfo_field_director'] = 'Director:';
+$l['ougc_mediainfo_field_writer'] = 'Writer:';
+$l['ougc_mediainfo_field_actors'] = 'Actors:';
+$l['ougc_mediainfo_field_plot'] = 'Plot:';
+$l['ougc_mediainfo_field_language'] = 'Language:';
+$l['ougc_mediainfo_field_country'] = 'County:';
+$l['ougc_mediainfo_field_awards'] = 'Awards:';
+$l['ougc_mediainfo_field_type'] = 'Type:';
+$l['ougc_mediainfo_field_production'] = 'Production:';
+$l['ougc_mediainfo_field_ratings'] = 'Ratings:';

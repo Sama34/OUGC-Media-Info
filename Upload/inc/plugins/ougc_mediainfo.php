@@ -86,6 +86,10 @@ class OUGC_MediaInfo
 {
 	public $key = null;
 
+	public $force_update = false;
+
+	public $remove_image = '';
+
 	function __construct()
 	{
 		global $plugins, $settings;
@@ -94,11 +98,13 @@ class OUGC_MediaInfo
 		if(!defined('IN_ADMINCP'))
 		{
 			$plugins->add_hook('newthread_end', array($this, 'hook_newthread_end'));
+			$plugins->add_hook('editpost_end', array($this, 'hook_newthread_end'));
 
-			//$plugins->add_hook('datahandler_post_validate_post', array($this, 'hook_datahandler_post_validate_post'));
+			$plugins->add_hook('datahandler_post_validate_post', array($this, 'hook_datahandler_post_validate_post'));
 			$plugins->add_hook('datahandler_post_validate_thread', array($this, 'hook_datahandler_post_validate_post'));
 	
 			$plugins->add_hook('datahandler_post_insert_thread', array($this, 'hook_datahandler_post_insert_thread'));
+			$plugins->add_hook('datahandler_post_update_thread', array($this, 'hook_datahandler_post_update_thread'));
 	
 			$plugins->add_hook('showthread_end', array($this, 'hook_showthread_end'));
 		}
@@ -174,6 +180,7 @@ class OUGC_MediaInfo
 
 		find_replace_templatesets('newthread', '#'.preg_quote('{$posticons}').'#i', '{$ougc_mediainfo_input}{$posticons}');
 		find_replace_templatesets('editpost', '#'.preg_quote('{$posticons}').'#i', '{$ougc_mediainfo_input}{$posticons}');
+		find_replace_templatesets('showthread', '#'.preg_quote('<tr><td id="posts_container">').'#i', '{$ougc_mediainfo_display}<tr><td id="posts_container">');
 
 		// Insert/update version into cache
 		$plugins = $mybb->cache->read('ougc_plugins');
@@ -209,6 +216,7 @@ class OUGC_MediaInfo
 
 		find_replace_templatesets('newthread', '#'.preg_quote('{$ougc_mediainfo_input}').'#i', '', 0);
 		find_replace_templatesets('editpost', '#'.preg_quote('{$ougc_mediainfo_input}').'#i', '', 0);
+		find_replace_templatesets('showthread', '#'.preg_quote('{$ougc_mediainfo_display}').'#i', '', 0);
 	}
 
 	// Plugin API:_install() routine
@@ -345,10 +353,8 @@ class OUGC_MediaInfo
 				'imdbvotes'		=> "int(10) NOT NULL DEFAULT '0'",
 				'imdbid'		=> "varchar(15) NOT NULL DEFAULT ''",
 				'type'			=> "varchar(15) NOT NULL DEFAULT ''",
-				'dvd'			=> "int(10) NOT NULL DEFAULT '0'",
-				'boxoffice'		=> "varchar(15) NOT NULL DEFAULT ''",
 				'production'	=> "varchar(50) NOT NULL DEFAULT ''",
-				'website'		=> "varchar(150) NOT NULL DEFAULT ''",
+				'image'		=> "varchar(150) NOT NULL DEFAULT ''",
 				'prymary_key'	=> "mid"
 			)
 		);
@@ -450,19 +456,29 @@ class OUGC_MediaInfo
 	// Hook: newthread_end
 	function hook_newthread_end()
 	{
-		global $mybb, $fid, $templates, $ougc_mediainfo_input, $lang;
+		global $mybb, $fid, $templates, $ougc_mediainfo_input, $lang, $thread, $pid;
 
 		if(!is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $fid)))
 		{
 			return;
 		}
-	
+
+		if($plugins->current_hook == 'editpost_end' && $pid != $thread['firstpost'])
+		{
+			return;
+		}
+
 		$this->load_language();
 
 		$imdbid = '';
+
 		if($mybb->request_method == 'post')
 		{
 			$imdbid = htmlspecialchars_uni($mybb->get_input('imdbid'));
+		}
+		elseif(isset($thread['imdbid']))
+		{
+			$imdbid = htmlspecialchars_uni("https://www.imdb.com/title/{$thread['imdbid']}/");
 		}
 
 		$ougc_mediainfo_input = eval($templates->render('ougcmediainfo_input'));
@@ -475,13 +491,18 @@ class OUGC_MediaInfo
 
 	function hook_datahandler_post_validate_post(&$dh)
 	{
-		global $mybb, $lang, $db;
+		global $mybb, $lang, $db, $plugins, $thread;
 
 		if(!is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $dh->data['fid'])))
 		{
 			return;
 		}
-	
+
+		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post)
+		{
+			return;
+		}
+
 		$this->load_language();
 
 		preg_match('#^https://(?:www\.)?imdb\.com/title/(tt[^/]+/)$#', $mybb->get_input('imdbid'), $match);
@@ -497,7 +518,7 @@ class OUGC_MediaInfo
 
 		$dh->ougc_mediainfo = $this->get_media($imdbid);
 
-		if(empty($dh->ougc_mediainfo) || (string)$dh->ougc_mediainfo['Response'] != 'True')
+		if(empty($dh->ougc_mediainfo))
 		{
 			$dh->set_error($lang->ougc_mediainfo_error_apikey);
 
@@ -505,6 +526,18 @@ class OUGC_MediaInfo
 		}
 
 		$dh->data['imdbid'] = $imdbid;
+
+		if($plugins->current_hook == 'datahandler_post_validate_post')
+		{
+			$dh->thread_update_data['imdbid'] = $imdbid;
+
+			$this->set_remove_image($thread['tid'], $thread['imdbid']);
+		}
+	}
+
+	function set_remove_image($tid, $imdbid)
+	{
+		$this->remove_image = array('tid' => (int)$tid, 'imdbid' => $imdbid);
 	}
 
 	// Hook: 
@@ -519,13 +552,30 @@ class OUGC_MediaInfo
 
 		$dh->thread_insert_data['imdbid'] = $db->escape_string($dh->data['imdbid']);
 
-		$this->inset_data($dh->data['imdbid'], $dh->ougc_mediainfo);
+		$this->insert_data($dh->data['imdbid'], $dh->ougc_mediainfo);
+	}
+
+	// Hook: 
+	function hook_datahandler_post_update_thread(&$dh)
+	{
+		if(empty($dh->thread_update_data['imdbid']))
+		{
+			return;
+		}
+
+		global $db;
+
+		$dh->thread_update_data['imdbid'] = $db->escape_string($dh->thread_update_data['imdbid']);
+
+		$this->insert_data($dh->thread_update_data['imdbid'], $dh->ougc_mediainfo);
 	}
 
 	// Hook: 
 	function hook_showthread_end()
 	{
-		global $mybb, $thread, $db;
+		global $mybb, $thread, $db, $ougc_mediainfo_display, $templates, $lang;
+
+		$ougc_mediainfo_display = '';
 
 		if(empty($thread['imdbid']) || !is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $thread['fid'])))
 		{
@@ -536,14 +586,95 @@ class OUGC_MediaInfo
 
 		$query = $db->simple_select('ougc_mediainfo', '*', "imdbid='{$imdbid}'");
 
-		$imdb = $db->fetch_array($query);
+		$media = $db->fetch_array($query);
 
-		if(empty($imdb['mid']))
+		if(empty($media['mid']))
 		{
 			return;
 		}
+	
+		$this->load_language();
 
-		_dump($imdb);
+		foreach(array('mid', 'year', 'metascore', 'imdbvotes', 'released') as $field)
+		{
+			$media[$field] = (int)$media[$field];
+
+			if($field == 'mid' || empty($media[$field]))
+			{
+				continue;
+			}
+
+			if($field == 'imdbvotes')
+			{
+				$media[$field] = my_number_format($media[$field]);
+			}
+
+			if($field == 'released')
+			{
+				$media[$field] = my_date($mybb->settings['dateformat'], $media[$field]);
+			}
+
+			$name = $lang->{'ougc_mediainfo_field_'.$field};
+			$value = $media[$field];
+
+			${$field} = eval($templates->render('ougcmediainfo_field'));
+		}
+
+		foreach(array('title', 'rated', 'runtime', 'genre', 'director', 'writer', 'actors', 'plot', 'language', 'country', 'awards', 'poster', 'imdbid', 'type', 'production', 'image', 'imdbrating') as $field)
+		{
+			$media[$field] = htmlspecialchars_uni($media[$field]);
+
+			if($field == 'poster' || $field == 'image' || empty($media[$field]))
+			{
+				continue;
+			}
+
+			if($field == 'imdbrating')
+			{
+				$media[$field] = (float)$media[$field];
+			}
+	
+			if($field == 'type')
+			{
+				$media[$field] = ucfirst($media[$field]);
+			}
+
+			$name = $lang->{'ougc_mediainfo_field_'.$field};
+			$value = $media[$field];
+
+			${$field} = eval($templates->render('ougcmediainfo_field'));
+		}
+
+		$imdb_url = htmlspecialchars_uni("https://www.imdb.com/title/{$media['imdbid']}/");
+
+		$ratings = my_unserialize($media['ratings']);
+
+		foreach((array)$ratings as $rating)
+		{
+			$rating['Source'] = htmlspecialchars_uni($rating['Source']);
+			$rating['Value'] = htmlspecialchars_uni($rating['Value']);
+
+			$rating_list = eval($templates->render('ougcmediainfo_field'));
+		}
+
+		if($rating_list)
+		{
+			$name = $lang->ougc_mediainfo_field_ratings;
+			$value = $rating_list;
+
+			$rating_list = eval($templates->render('ougcmediainfo_ratings'));
+		}
+
+		if($media['image'])
+		{
+			$image_source = $mybb->settings['bburl'].'/uploads/ougc_mediainfo/'.$media['image'];
+		}
+		else
+		{
+			$image_source = $media['poster'];
+		}
+
+		$ougc_mediainfo_display = eval($templates->render('ougcmediainfo'));
 	}
 
 	function get_media($imdbid)
@@ -552,10 +683,45 @@ class OUGC_MediaInfo
 
 		$json = file_get_contents("http://www.omdbapi.com/?i={$imdbid}&apikey={$mybb->settings['ougc_mediainfo_apikey']}");
 
-		return json_decode($json, true);
+		$media = json_decode($json, true);
+
+		if(empty($media))
+		{
+			include_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
+	
+			$imdb = new IMDB($imdbid);
+	
+			$imdb = $imdb->getAll();
+
+			$media = array(
+				'Title'		=> $imdb['getTitle']['value'],
+				'Year'		=> $imdb['getYear']['value'],
+				'Rated'		=> $imdb['getMpaa']['value'],
+				'Released'	=> $imdb['getReleaseDate']['value'],
+				'Runtime'	=> $imdb['getRuntime']['value'],
+				'Genre'		=> str_replace(' /', ',', $imdb['getGenre']['value']),
+				'Director'	=> str_replace(' /', ',', $imdb['getDirector']['value']),
+				'Writer'	=> str_replace(' /', ',', $imdb['getWriter']['value']),
+				'Actors'	=> str_replace(' /', ',', $imdb['getCast']['value']),
+				'Plot'		=> str_replace(' /', ',', $imdb['getDescription']['value']),
+				'Language'	=> str_replace(' /', ',', $imdb['getLanguage']['value']),
+				'Country'	=> $imdb['getLocation']['value'],
+				'Awards'	=> str_replace(' /', ',', $imdb['getAwards']['value']),
+				'Poster'	=> $imdb['getPoster']['value'],
+				'Ratings'	=> '',
+				'Metascore'	=> '',
+				'imdbRating'=> $imdb['getRating']['value'],
+				'imdbVotes'	=> $imdb['getRatingCount']['value'],
+				'imdbID'	=> $imdbid,
+				'Type'	=> '',
+				'Production'	=> $imdb['getCompany']['value'],
+			);
+		}
+
+		return $media;
 	}
 
-	function inset_data($imdbid, $data)
+	function insert_data($imdbid, $data)
 	{
 		global $mybb, $db;
 
@@ -584,10 +750,7 @@ class OUGC_MediaInfo
 			'imdbrating'=> (float)$data['imdbRating'],
 			'imdbvotes'	=> (int)str_replace(',', '', (string)$data['imdbVotes']),
 			'type'		=> $db->escape_string($data['Type']),
-			'dvd'		=> strtotime($data['DVD']),
-			'boxoffice'	=> $db->escape_string($data['BoxOffice']),
-			'production'=> $db->escape_string($data['Production']),
-			'website'	=> $db->escape_string($data['Website'])
+			'production'=> $db->escape_string($data['Production'])
 		);
 
 		foreach($insert_data as $key => &$value)
@@ -595,6 +758,12 @@ class OUGC_MediaInfo
 			if($value == 'N/A')
 			{
 				$value = '';
+			}
+
+			if(empty($value) && !$this->force_update)
+			{
+				unset($insert_data[$key]);
+				// so no data is deleted on update
 			}
 		}
 
@@ -620,20 +789,39 @@ class OUGC_MediaInfo
 
 		$image = file_get_contents($data['Poster']);
 
-		$fp = @fopen("{$images_path}/{$imdbid}.{$ext}", 'w');
+		require_once MYBB_ROOT.'inc/functions_upload.php';
 
-		if($fp)
+		upload_file($image, MYBB_ROOT.'uploads/ougc_mediainfo', "{$imdbid}.{$ext}");
+
+		$this->remove_media($imdbid);
+	}
+
+	function remove_media($new_image='')
+	{
+		global $db;
+
+		if(!empty($this->remove_image) && $this->remove_image['imdbid'] != $new_image)
 		{
-			@fwrite($fp, $image);
-		}
+			$imdbid = $db->escape_string($this->remove_image['imdbid']);
 
-		@fclose($fp);
+			$query = $db->simple_select('threads', 'tid', "tid!='{$this->remove_image['tid']}' AND imdbid='{$imdbid}'");
+			$existing = $db->num_rows($query);
+
+			if(!$existing)
+			{
+				$query = $db->simple_select('ougc_mediainfo', '*', "imdbid='{$imdbid}'");
+				$media = $db->fetch_array($query);
+
+				require_once MYBB_ROOT.'inc/functions_upload.php';
+
+				delete_uploaded_file(MYBB_ROOT.'uploads/ougc_mediainfo/'.$media['image']);
+
+				$db->delete_query('ougc_mediainfo', "imdbid='{$imdbid}'");
+			}
+		}
 	}
 }
 
 global $ougc_mediainfo;
 
 $ougc_mediainfo = new OUGC_MediaInfo;
-
-//my_date($mybb->settings['dateformat'], $insert_data['dvd'])
-//my_date($mybb->settings['dateformat'], $insert_data['released'])
