@@ -92,7 +92,7 @@ class OUGC_MediaInfo
 
 	function __construct()
 	{
-		global $plugins, $settings;
+		global $plugins, $settings, $templatelist;
 
 		// Tell MyBB when to run the hook
 		if(!defined('IN_ADMINCP'))
@@ -107,9 +107,31 @@ class OUGC_MediaInfo
 			$plugins->add_hook('datahandler_post_update_thread', array($this, 'hook_datahandler_post_update_thread'));
 	
 			$plugins->add_hook('showthread_end', array($this, 'hook_showthread_end'));
-		}
+	
+			$plugins->add_hook('forumdisplay_thread_end', array($this, 'hook_forumdisplay_thread_end'));
+	
+			$plugins->add_hook('class_moderation_delete_thread_start', array($this, 'hook_class_moderation_delete_thread_start'));
+			$plugins->add_hook('class_moderation_merge_threads', array($this, 'hook_class_moderation_merge_threads'));
 
-		//$this->key = (string)$settings['ougc_mediainfo_key'];
+			if(isset($templatelist))
+			{
+				$templatelist .= ',';
+			}
+			else
+			{
+				$templatelist = '';
+			}
+
+			if(defined('THIS_SCRIPT'))
+			{
+				$templatelist .= 'ougcmediainfo_field, ougcmediainfo_rating, ougcmediainfo';
+
+				if(THIS_SCRIPT == 'forumdisplay.php')
+				{
+					$templatelist .= ',ougcmediainfo_popup, ougcmediainfo_id, ougcmediainfo_js';
+				}
+			}
+		}
 	}
 
 	// Plugin API:_info() routine
@@ -156,11 +178,90 @@ class OUGC_MediaInfo
 			   'optionscode'	=> 'text',
 			   'value'			=> ''
 			),
+			'fields_thread'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_fields_thread,
+			   'description'	=> $lang->setting_ougc_mediainfo_fields_thread_desc,
+			   'optionscode'	=> "checkbox
+title={$lang->setting_ougc_mediainfo_fields_title}
+year={$lang->setting_ougc_mediainfo_fields_year}
+released={$lang->setting_ougc_mediainfo_fields_released}
+runtime={$lang->setting_ougc_mediainfo_fields_runtime}
+genre={$lang->setting_ougc_mediainfo_fields_genre}
+director={$lang->setting_ougc_mediainfo_fields_director}
+writer={$lang->setting_ougc_mediainfo_fields_writer}
+actors={$lang->setting_ougc_mediainfo_fields_actors}
+plot={$lang->setting_ougc_mediainfo_fields_plot}
+language={$lang->setting_ougc_mediainfo_fields_language}
+country={$lang->setting_ougc_mediainfo_fields_country}
+awards={$lang->setting_ougc_mediainfo_fields_awards}
+type={$lang->setting_ougc_mediainfo_fields_type}
+production={$lang->setting_ougc_mediainfo_fields_production}
+metascore={$lang->setting_ougc_mediainfo_fields_metascore}
+imdbvotes={$lang->setting_ougc_mediainfo_fields_imdbvotes}
+rated={$lang->setting_ougc_mediainfo_fields_rated}
+rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
+			   'value'			=> 'title,year,released,runtime,genre,director,writer,actors,plot,language,country,awards,type,production,metascore,imdbvotes,rated,rating_list'
+			),
+			'fields_forumlist'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_fields_forumlist,
+			   'description'	=> $lang->setting_ougc_mediainfo_fields_forumlist_desc,
+			   'optionscode'	=> "checkbox
+title={$lang->setting_ougc_mediainfo_fields_title}
+year={$lang->setting_ougc_mediainfo_fields_year}
+released={$lang->setting_ougc_mediainfo_fields_released}
+runtime={$lang->setting_ougc_mediainfo_fields_runtime}
+genre={$lang->setting_ougc_mediainfo_fields_genre}
+director={$lang->setting_ougc_mediainfo_fields_director}
+writer={$lang->setting_ougc_mediainfo_fields_writer}
+actors={$lang->setting_ougc_mediainfo_fields_actors}
+plot={$lang->setting_ougc_mediainfo_fields_plot}
+language={$lang->setting_ougc_mediainfo_fields_language}
+country={$lang->setting_ougc_mediainfo_fields_country}
+awards={$lang->setting_ougc_mediainfo_fields_awards}
+type={$lang->setting_ougc_mediainfo_fields_type}
+production={$lang->setting_ougc_mediainfo_fields_production}
+metascore={$lang->setting_ougc_mediainfo_fields_metascore}
+imdbvotes={$lang->setting_ougc_mediainfo_fields_imdbvotes}
+rated={$lang->setting_ougc_mediainfo_fields_rated}
+rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
+			   'value'			=> 'released,genre,director,country,awards,type,production'
+			),
 		));
 
 		// Insert template/group
 		$PL->templates('ougcmediainfo', 'OUGC Media Info', array(
-			''	=> '',
+			''	=> '<tr>
+	<td class="trow1">
+		<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}">
+			<tr>
+				<td align="center" width="20%">
+					<img src="{$image_source}" alt="{$media[\'title\']}" title="{$media[\'title\']}" style="max-width: 300px;max-height: 300px;" />
+				</td>
+				<td width="80%">
+					{$type}
+					{$title}
+					{$year}
+					{$released}
+					{$runtime}
+					{$genre}
+					{$director}
+					{$writer}
+					{$actors}
+					{$plot}
+					{$language}
+					{$country}
+					{$awards}
+					{$production}
+					{$metascore}
+					{$imdbvotes}
+					{$rated}
+					{$rating_list}
+				</td>
+			</tr>
+		</table>
+	</td>
+</tr>',
+			'field'	=> '<div><strong>{$name}</strong> {$value}</div>',
 			'input'	=> '<tr>
 	<td class="trow2" width="20%">
 		<strong>{$lang->ougc_mediainfo_input}</strong>
@@ -172,8 +273,56 @@ class OUGC_MediaInfo
 		</div>
 	</td>
 </tr>',
-			''	=> '',
-			''	=> ''
+			'rating'	=> '{$name}: <i>{$value}</i><br />',
+			'id'	=> ' id="ougcmediainfo_{$thread[\'tid\']}"',
+			'js'	=> '<script>
+	$(function() {
+		var moveLeft = 20;
+		var moveDown = 10;
+
+		$("[id^=ougcmediainfo_]").hover(function(e) {
+			id = $(this).attr(\'id\');
+			tid = id.replace( /[^\d.]/g, \'\');
+
+			$(\'#ougcmediainfo_popup_\' + tid).fadeIn(50)
+			.css(\'top\', e.pageY + moveDown)
+			.css(\'left\', e.pageX + moveLeft);
+			//.appendTo(\'body\');
+			}, function() {
+				$(\'#ougcmediainfo_popup_\' + tid).hide();
+			});
+
+			$(\'#ougcmediainfo_\' + tid).mousemove(function(e) {
+			$(\'#ougcmediainfo_popup_\' + tid).css(\'top\', e.pageY + moveDown).css(\'left\', e.pageX + moveLeft);
+		});
+	});
+	//https://codepen.io/thebalu/pen/NqErJO
+</script>
+<style>
+	*[id*=\'ougcmediainfo_popup_\'] {
+		display: none;
+		position: absolute;
+		max-width: 25%;
+		left: 20%;
+	}
+
+	*[id*=\'ougcmediainfo_popup_\'], *[id*=\'ougcmediainfo_popup_\'] * {
+		font-size: 98%;
+	}
+
+	*[id*=\'ougcmediainfo_popup_\'] img {
+		max-width: 100px;
+		max-height: 100px;
+	}
+</style>',
+			'popup'	=> '<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder clear" id="ougcmediainfo_popup_{$thread[\'tid\']}">
+	<tr>
+		<td class="thead">
+			<strong>{$media[\'title\']}</strong>
+		</td>
+	</tr>
+	{$ougc_mediainfo_display}
+</table>'
 		));
 
 		require_once MYBB_ROOT.'inc/adminfunctions_templates.php';
@@ -181,6 +330,9 @@ class OUGC_MediaInfo
 		find_replace_templatesets('newthread', '#'.preg_quote('{$posticons}').'#i', '{$ougc_mediainfo_input}{$posticons}');
 		find_replace_templatesets('editpost', '#'.preg_quote('{$posticons}').'#i', '{$ougc_mediainfo_input}{$posticons}');
 		find_replace_templatesets('showthread', '#'.preg_quote('<tr><td id="posts_container">').'#i', '{$ougc_mediainfo_display}<tr><td id="posts_container">');
+		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('<td class="{$bgcolor}{$thread_type_class}">').'#i', '<td class="{$bgcolor}{$thread_type_class}"{$ougc_mediainfo_id}>');
+		find_replace_templatesets('forumdisplay', '#'.preg_quote('{$threadslist}').'#i', '{$threadslist}{$ougc_mediainfo_forumdisplay_js}');
+		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$attachment_count}').'#i', '{$attachment_count}{$ougc_mediainfo_popup}');
 
 		// Insert/update version into cache
 		$plugins = $mybb->cache->read('ougc_plugins');
@@ -217,6 +369,9 @@ class OUGC_MediaInfo
 		find_replace_templatesets('newthread', '#'.preg_quote('{$ougc_mediainfo_input}').'#i', '', 0);
 		find_replace_templatesets('editpost', '#'.preg_quote('{$ougc_mediainfo_input}').'#i', '', 0);
 		find_replace_templatesets('showthread', '#'.preg_quote('{$ougc_mediainfo_display}').'#i', '', 0);
+		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$ougc_mediainfo_id}').'#i', '', 0);
+		find_replace_templatesets('forumdisplay', '#'.preg_quote('{$ougc_mediainfo_forumdisplay_js}').'#i', '', 0);
+		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$ougc_mediainfo_popup}').'#i', '', 0);
 	}
 
 	// Plugin API:_install() routine
@@ -531,11 +686,11 @@ class OUGC_MediaInfo
 		{
 			$dh->thread_update_data['imdbid'] = $imdbid;
 
-			$this->set_remove_image($thread['tid'], $thread['imdbid']);
+			$this->set_remove_media($thread['tid'], $thread['imdbid']);
 		}
 	}
 
-	function set_remove_image($tid, $imdbid)
+	function set_remove_media($tid, $imdbid)
 	{
 		$this->remove_image = array('tid' => (int)$tid, 'imdbid' => $imdbid);
 	}
@@ -588,12 +743,126 @@ class OUGC_MediaInfo
 
 		$media = $db->fetch_array($query);
 
+		$ougc_mediainfo_display = $this->render($media);
+	}
+
+	// Hook: 
+	function hook_forumdisplay_thread_end()
+	{
+		global $mybb, $thread, $db, $ougc_mediainfo_id, $templates, $lang, $threadcache, $theme, $ougc_mediainfo_popup, $plugins;
+
+		$ougc_mediainfo_id = $ougc_mediainfo_popup = '';
+
+		if(empty($thread['imdbid']) || !is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $thread['fid'])))
+		{
+			return;
+		}
+
+		static $media_cache = null;
+
+		if($media_cache === null)
+		{
+			$media_cache = $imdbids = array();
+
+			foreach($threadcache as $_thread)
+			{
+				if(!empty($_thread['imdbid']))
+				{
+					$imdbids[$_thread['imdbid']] = $db->escape_string($_thread['imdbid']);
+				}
+			}
+
+			$imdbids = implode("','", $imdbids);
+
+			$query = $db->simple_select('ougc_mediainfo', '*', "imdbid IN ('{$imdbids}')");
+
+			while($media = $db->fetch_array($query))
+			{
+				$media_cache[$media['imdbid']] = $media;
+			}
+		}
+
+		$media = $media_cache[$thread['imdbid']];
+
+		$media['title'] = htmlspecialchars_uni($media['title']);
+
+		$ougc_mediainfo_display = $this->render($media);
+
+		$ougc_mediainfo_popup = eval($templates->render('ougcmediainfo_popup'));
+
+		$ougc_mediainfo_id = eval($templates->render('ougcmediainfo_id', true, false));
+
+		$plugins->add_hook('forumdisplay_threadlist', array($this, 'hook_forumdisplay_threadlist'));
+	}
+
+	function hook_class_moderation_delete_thread_start(&$tid)
+	{
+		global $plugins, $db;
+
+		$tid = (int)$tid;
+
+		$thread = get_thread($tid);
+
+		$imdbid = $db->escape_string($thread['imdbid']);
+
+		$query = $db->simple_select('threads', 'tid', "tid!='{$tid}' AND imdbid='{$imdbid}'");
+
+		$existing_threads = $db->num_rows($query);
+
+		if(!$existing_threads)
+		{
+			$this->set_remove_media($thread['tid'], $thread['imdbid']);
+		
+			$plugins->add_hook('class_moderation_delete_thread', array($this, 'hook_class_moderation_delete_thread'));
+		}
+	}
+
+	function hook_class_moderation_delete_thread(&$tid)
+	{
+		$this->remove_media();
+	}
+
+	function hook_class_moderation_merge_threads(&$args)
+	{
+		global $db;
+
+		$old_thread = get_thread($args['mergetid']);
+
+		$imdbid = $db->escape_string($old_thread['imdbid']);
+
+		$tid = (int)$args['tid'];
+
+		$db->update_query("threads", array('imdbid' => $imdbid), "tid = '{$tid}'");
+	}
+
+	function hook_forumdisplay_threadlist()
+	{
+		global $ougc_mediainfo_forumdisplay_js, $templates;
+
+		$ougc_mediainfo_forumdisplay_js = eval($templates->render('ougcmediainfo_js'));
+	}
+
+	function render($media)
+	{
+		global $templates, $lang, $mybb;
+
 		if(empty($media['mid']))
 		{
 			return;
 		}
 	
 		$this->load_language();
+
+		if(THIS_SCRIPT == 'showthread.php')
+		{
+			$disettings = explode(',', $mybb->settings['ougc_mediainfo_fields_thread']);
+		}
+		else
+		{
+			$disettings = explode(',', $mybb->settings['ougc_mediainfo_fields_forumlist']);
+		}
+
+		$disettings = array_flip($disettings);
 
 		foreach(array('mid', 'year', 'metascore', 'imdbvotes', 'released') as $field)
 		{
@@ -612,6 +881,11 @@ class OUGC_MediaInfo
 			if($field == 'released')
 			{
 				$media[$field] = my_date($mybb->settings['dateformat'], $media[$field]);
+			}
+
+			if(!isset($disettings[$field]))
+			{
+				continue;
 			}
 
 			$name = $lang->{'ougc_mediainfo_field_'.$field};
@@ -639,6 +913,11 @@ class OUGC_MediaInfo
 				$media[$field] = ucfirst($media[$field]);
 			}
 
+			if(!isset($disettings[$field]))
+			{
+				continue;
+			}
+
 			$name = $lang->{'ougc_mediainfo_field_'.$field};
 			$value = $media[$field];
 
@@ -649,12 +928,17 @@ class OUGC_MediaInfo
 
 		$ratings = my_unserialize($media['ratings']);
 
-		foreach((array)$ratings as $rating)
-		{
-			$rating['Source'] = htmlspecialchars_uni($rating['Source']);
-			$rating['Value'] = htmlspecialchars_uni($rating['Value']);
+		$rating_list = '';
 
-			$rating_list = eval($templates->render('ougcmediainfo_field'));
+		if(isset($disettings['rating_list']))
+		{
+			foreach((array)$ratings as &$rating)
+			{
+				$name = $rating['Source'] = htmlspecialchars_uni($rating['Source']);
+				$value = $rating['Value'] = htmlspecialchars_uni($rating['Value']);
+	
+				$rating_list = eval($templates->render('ougcmediainfo_rating'));
+			}
 		}
 
 		if($rating_list)
@@ -662,7 +946,7 @@ class OUGC_MediaInfo
 			$name = $lang->ougc_mediainfo_field_ratings;
 			$value = $rating_list;
 
-			$rating_list = eval($templates->render('ougcmediainfo_ratings'));
+			$rating_list = eval($templates->render('ougcmediainfo_field'));
 		}
 
 		if($media['image'])
@@ -674,7 +958,7 @@ class OUGC_MediaInfo
 			$image_source = $media['poster'];
 		}
 
-		$ougc_mediainfo_display = eval($templates->render('ougcmediainfo'));
+		return eval($templates->render('ougcmediainfo'));
 	}
 
 	function get_media($imdbid)
@@ -728,7 +1012,7 @@ class OUGC_MediaInfo
 		$imdbid = $db->escape_string($imdbid);
 
 		$query = $db->simple_select('ougc_mediainfo', '*', "imdbid='{$imdbid}'");
-		$update = $db->num_rows($query);
+		$update = (bool)$db->num_rows($query);
 
 		$insert_data = array(
 			'title'		=> $db->escape_string($data['Title']),
@@ -782,16 +1066,56 @@ class OUGC_MediaInfo
 
 		$ext = get_extension(my_strtolower($data['Poster']));
 
-		if(!is_writable($images_path) || !in_array($ext, array('gif', 'png', 'jpg', 'jpeg', 'jpe')))
+		if(!is_writable($images_path) || !in_array($ext, array('gif', 'png', 'jpg', 'jpeg', 'jpe')) || !function_exists('curl_init'))
 		{
 			return;
 		}
 
-		$image = file_get_contents($data['Poster']);
+		if(!($image = file_get_contents($data['Poster'])) || !($headers = get_headers($data['Poster'], 1)))
+		{
+			return;
+		}
 
-		require_once MYBB_ROOT.'inc/functions_upload.php';
+		switch(my_strtolower($headers['Content-Type']))
+		{
+			case "image/gif":
+			case "image/jpeg":
+			case "image/x-jpg":
+			case "image/x-jpeg":
+			case "image/pjpeg":
+			case "image/jpg":
+			case "image/png":
+			case "image/x-png":
+				$valid_image = true;
+				break;
+			default:
+				$valid_image = false;
+				break;
+		}
 
-		upload_file($image, MYBB_ROOT.'uploads/ougc_mediainfo', "{$imdbid}.{$ext}");
+		if(!$headers['Content-Length'] || !$valid_image)
+		{
+			return;
+		}
+
+		$fp = @fopen("{$images_path}/{$imdbid}.{$ext}", 'w');
+
+		if($fp)
+		{
+			@fwrite($fp, $image);
+
+			$db->update_query('ougc_mediainfo', array('image' => $db->escape_string("{$imdbid}.{$ext}")), "imdbid='{$imdbid}'");
+		}
+
+		@fclose($fp);
+
+		//$cdn_path = '';
+
+		//copy_file_to_cdn("{$images_path}/{$imdbid}.{$ext}", $cdn_path);
+
+		//require_once MYBB_ROOT.'inc/functions_upload.php';
+
+		//upload_file($data['Poster'], MYBB_ROOT.'uploads/ougc_mediainfo', "{$imdbid}.{$ext}");
 
 		$this->remove_media($imdbid);
 	}
