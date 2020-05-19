@@ -311,8 +311,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 	}
 
 	*[id*=\'ougcmediainfo_popup_\'] img {
-		max-width: 100px;
-		max-height: 100px;
+		max-width: 100px !important;
+		max-height: 100px !important;
 	}
 </style>',
 			'popup'	=> '<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder clear" id="ougcmediainfo_popup_{$thread[\'tid\']}">
