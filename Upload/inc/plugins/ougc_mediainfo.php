@@ -1079,7 +1079,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		}
 
 		// We get some alternative data because the OMDB data might be incomplete
-		include_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
+		require_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
 
 		$imdb = new IMDB($imdbid);
 
