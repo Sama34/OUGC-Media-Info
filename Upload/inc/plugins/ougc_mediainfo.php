@@ -887,7 +887,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if($mybb->input['forums'][0] != 'all')
+		if(isset($mybb->input['forums']) && (string)$mybb->input['forums'][0] != 'all')
 		{
 			if(is_array($mybb->input['forums']))
 			{
