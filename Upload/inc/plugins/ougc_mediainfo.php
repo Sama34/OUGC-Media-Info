@@ -921,6 +921,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$mybb->input['postthread'] = 1;
 
+		$mybb->input['showresults'] = 'threads';
+
 		$mybb->input['keywords'] = $imdbid;
 
 		control_object($db, '
