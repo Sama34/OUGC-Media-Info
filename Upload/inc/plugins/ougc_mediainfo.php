@@ -682,6 +682,13 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
+		if(empty($imdbid))
+		{
+			$dh->set_error($lang->ougc_mediainfo_error_nomatch);
+
+			return;
+		}
+
 		$dh->ougc_mediainfo = $this->get_media($imdbid);
 
 		if(empty($dh->ougc_mediainfo))
@@ -1070,16 +1077,23 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$omdb_data = json_decode($json, true);
 
-		foreach($omdb_data as $key => $value)
+		if(empty($omdb_data['Response']))
 		{
-			if($value == 'N/A')
+			foreach($omdb_data as $key => $value)
 			{
-				$omdb_data[$key] = '';
+				if(strtolower($value) == 'n/a')
+				{
+					$omdb_data[$key] = '';
+				}
 			}
+		}
+		else
+		{
+			$omdb_data = false;
 		}
 
 		// We get some alternative data because the OMDB data might be incomplete
-		require_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
+		include_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
 
 		$imdb = new IMDB($imdbid);
 
@@ -1111,10 +1125,20 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		foreach($imdb_data as $key => $value)
 		{
-			if(empty($omdb_data[$key]))
+			if(strtolower($value) == 'n/a')
+			{
+				$value = '';
+			}
+
+			if(empty($omdb_data[$key]) && !empty($value))
 			{
 				$omdb_data[$key] = $value;
 			}
+		}
+
+		if(empty($omdb_data['Title']))
+		{
+			return false;
 		}
 
 		return $omdb_data;
@@ -1154,7 +1178,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		foreach($insert_data as $key => &$value)
 		{
-			if($value == 'N/A')
+			if(strtolower($value) == 'n/a')
 			{
 				$value = '';
 			}
