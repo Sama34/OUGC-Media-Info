@@ -127,11 +127,19 @@ class OUGC_MediaInfo
 
 			if(defined('THIS_SCRIPT'))
 			{
-				$templatelist .= 'ougcmediainfo_field, ougcmediainfo_rating, ougcmediainfo';
-
+				if(THIS_SCRIPT == 'forumdisplay.php' || THIS_SCRIPT == 'showthread.php')
+				{
+					$templatelist .= ',ougcmediainfo_field, ougcmediainfo_rating, ougcmediainfo';
+				}
+				
 				if(THIS_SCRIPT == 'forumdisplay.php')
 				{
 					$templatelist .= ',ougcmediainfo_popup, ougcmediainfo_id, ougcmediainfo_js';
+				}
+
+				if(THIS_SCRIPT == 'search.php')
+				{
+					$templatelist .= ',ougcmediainfo_search';
 				}
 			}
 		}
@@ -331,7 +339,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		</td>
 	</tr>
 	{$ougc_mediainfo_display}
-</table>'
+</table>',
+			'search'	=> '<br /><input type="radio" class="radio" name="postthread" value="imdbid" />{$lang->ougc_mediainfo_search}'
 		));
 
 		require_once MYBB_ROOT.'inc/adminfunctions_templates.php';
