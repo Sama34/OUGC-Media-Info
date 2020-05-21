@@ -61,3 +61,5 @@ $l['setting_ougc_mediainfo_fields_metascore'] = 'Meta score';
 $l['setting_ougc_mediainfo_fields_imdbvotes'] = 'IMDB votes';
 $l['setting_ougc_mediainfo_fields_rated'] = 'Rate';
 $l['setting_ougc_mediainfo_fields_rating_list'] = 'Rating list';
+$l['setting_ougc_mediainfo_enablesearch'] = 'Enable Search';
+$l['setting_ougc_mediainfo_enablesearch_desc'] = 'Enable users to search by using the IMDB full URL or ID.';

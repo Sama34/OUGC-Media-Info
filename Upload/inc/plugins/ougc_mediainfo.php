@@ -113,6 +113,9 @@ class OUGC_MediaInfo
 			$plugins->add_hook('class_moderation_delete_thread_start', array($this, 'hook_class_moderation_delete_thread_start'));
 			$plugins->add_hook('class_moderation_merge_threads', array($this, 'hook_class_moderation_merge_threads'));
 
+			$plugins->add_hook('search_end', array($this, 'hook_search_end'));
+			$plugins->add_hook('search_do_search_start', array($this, 'hook_search_do_search_start'));
+
 			if(isset($templatelist))
 			{
 				$templatelist .= ',';
@@ -226,6 +229,12 @@ rated={$lang->setting_ougc_mediainfo_fields_rated}
 rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			   'value'			=> 'released,genre,director,country,awards,type,production'
 			),
+			'enablesearch'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_enablesearch,
+			   'description'	=> $lang->setting_ougc_mediainfo_enablesearch_desc,
+			   'optionscode'	=> 'yesno',
+			   'value'			=> 1
+			),
 		));
 
 		// Insert template/group
@@ -332,7 +341,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		find_replace_templatesets('showthread', '#'.preg_quote('<tr><td id="posts_container">').'#i', '{$ougc_mediainfo_display}<tr><td id="posts_container">');
 		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('<td class="{$bgcolor}{$thread_type_class}">').'#i', '<td class="{$bgcolor}{$thread_type_class}"{$ougc_mediainfo_id}>');
 		find_replace_templatesets('forumdisplay', '#'.preg_quote('{$threadslist}').'#i', '{$threadslist}{$ougc_mediainfo_forumdisplay_js}');
-		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$attachment_count}').'#i', '{$attachment_count}{$ougc_mediainfo_popup}');
+		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$attachment_count}').'#i', '{$attachment_count}{$ougc_mediainfo_popup}');;
+		find_replace_templatesets('search', '#'.preg_quote('search_titles_only}</span></td>').'#i', 'search_titles_only}{$ougc_mediainfo_search}</span></td>');
 
 		// Insert/update version into cache
 		$plugins = $mybb->cache->read('ougc_plugins');
@@ -372,6 +382,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$ougc_mediainfo_id}').'#i', '', 0);
 		find_replace_templatesets('forumdisplay', '#'.preg_quote('{$ougc_mediainfo_forumdisplay_js}').'#i', '', 0);
 		find_replace_templatesets('forumdisplay_thread', '#'.preg_quote('{$ougc_mediainfo_popup}').'#i', '', 0);
+		find_replace_templatesets('search', '#'.preg_quote('{$ougc_mediainfo_search}').'#i', '', 0);
 	}
 
 	// Plugin API:_install() routine
@@ -495,14 +506,14 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 				'runtime'		=> "varchar(10) NOT NULL DEFAULT ''",
 				'genre'			=> "varchar(250) NOT NULL DEFAULT ''",
 				'director'		=> "varchar(150) NOT NULL DEFAULT ''",
-				'writer'		=> "varchar(1000) NOT NULL DEFAULT ''",
-				'actors'		=> "varchar(250) NOT NULL DEFAULT ''",
-				'plot'			=> "varchar(500) NOT NULL DEFAULT ''",
+				'writer'		=> "text NULL",
+				'actors'		=> "text NULL",
+				'plot'			=> "text NULL",
 				'language'		=> "varchar(100) NOT NULL DEFAULT ''",
 				'country'		=> "varchar(50) NOT NULL DEFAULT ''",
 				'awards'		=> "varchar(150) NOT NULL DEFAULT ''",
-				'poster'		=> "varchar(150) NOT NULL DEFAULT ''",
-				'ratings'		=> "varchar(500) NOT NULL DEFAULT ''",
+				'poster'		=> "varchar(200) NOT NULL DEFAULT ''",
+				'ratings'		=> "text NULL",
 				'metascore'		=> "tinyint(5) NOT NULL DEFAULT '0'",
 				'imdbrating'	=> "float(4,2) UNSIGNED NOT NULL DEFAULT '0.00'",
 				'imdbvotes'		=> "int(10) NOT NULL DEFAULT '0'",
@@ -660,16 +671,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$this->load_language();
 
-		preg_match('#^https://(?:www\.)?imdb\.com/title/(tt[^/]+/)$#', $mybb->get_input('imdbid'), $match);
-
-		if(!$match || empty($match[1]))
-		{
-			$dh->set_error($lang->ougc_mediainfo_error_nomatch);
-
-			return;
-		}
-
-		$imdbid = str_replace('/', '', $match[1]);
+		$imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
 		$dh->ougc_mediainfo = $this->get_media($imdbid);
 
@@ -842,6 +844,91 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		$ougc_mediainfo_forumdisplay_js = eval($templates->render('ougcmediainfo_js'));
 	}
 
+	function hook_search_end()
+	{
+		global $mybb, $ougc_mediainfo_search, $templates, $lang;
+
+		if(!$mybb->settings['ougc_mediainfo_enablesearch'])
+		{
+			return;
+		}
+
+		$this->load_language();
+
+		$ougc_mediainfo_search = eval($templates->render('ougcmediainfo_search', true, false));
+	}
+
+	function hook_search_do_search_start()
+	{
+		global $mybb, $db;
+
+		$full_search = $mybb->get_input('postthread', MyBB::INPUT_STRING) === 'imdbid';
+
+		$forum_display = count($mybb->input) < 10 && $mybb->get_input('postthread', MyBB::INPUT_INT) && !$full_search;
+
+		if(!$full_search && !$forum_display || !$mybb->settings['ougc_mediainfo_enablesearch'])
+		{
+			return;
+		}
+
+		if($full_search)
+		{
+			$mybb->input['postthread'] = 1;
+		}
+
+		if($mybb->input['forums'][0] != 'all')
+		{
+			if(is_array($mybb->input['forums']))
+			{
+				$valid_forum = false;
+
+				foreach($mybb->input['forums'] as $fid)
+				{
+					if(is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $fid)))
+					{
+						$valid_forum = true;
+
+						break;
+					}
+				}
+
+				if(!$valid_forum)
+				{
+					return;
+				}
+			}
+			elseif(!is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $mybb->get_input('forums', MyBB::INPUT_INT))))
+			{
+				return;
+			}
+		}
+
+		if(!($imdbid = $this->get_imdbid($mybb->get_input('keywords', MyBB::INPUT_STRING))))
+		{
+			return;
+		}
+
+		$mybb->input['keywords'] = $imdbid;
+
+		control_object($db, '
+			function query($string, $hide_errors=0, $write_query=0)
+			{
+				static $done = false;
+
+				if(!$done && !$write_query && my_strpos($string, \'SELECT p.pid, p.tid\') !== false && my_strpos($string, \'p.message LIKE\') !== false)
+				{
+					$done = true;
+
+					$string = strtr($string, array(
+						\'p.message LIKE\' => \'t.imdbid LIKE\'
+					));
+				}
+
+				return parent::query($string, $hide_errors, $write_query);
+			}
+		');
+	}
+
 	function render($media)
 	{
 		global $templates, $lang, $mybb;
@@ -934,6 +1021,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		{
 			foreach((array)$ratings as &$rating)
 			{
+				if(empty($rating['Source']) || empty($rating['Value']))
+				{
+					continue;
+				}
+
 				$name = $rating['Source'] = htmlspecialchars_uni($rating['Source']);
 				$value = $rating['Value'] = htmlspecialchars_uni($rating['Value']);
 	
@@ -967,42 +1059,56 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$json = file_get_contents("http://www.omdbapi.com/?i={$imdbid}&apikey={$mybb->settings['ougc_mediainfo_apikey']}");
 
-		$media = json_decode($json, true);
+		$omdb_data = json_decode($json, true);
 
-		if(empty($media))
+		foreach($omdb_data as $key => $value)
 		{
-			include_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
-	
-			$imdb = new IMDB($imdbid);
-	
-			$imdb = $imdb->getAll();
-
-			$media = array(
-				'Title'		=> $imdb['getTitle']['value'],
-				'Year'		=> $imdb['getYear']['value'],
-				'Rated'		=> $imdb['getMpaa']['value'],
-				'Released'	=> $imdb['getReleaseDate']['value'],
-				'Runtime'	=> $imdb['getRuntime']['value'],
-				'Genre'		=> str_replace(' /', ',', $imdb['getGenre']['value']),
-				'Director'	=> str_replace(' /', ',', $imdb['getDirector']['value']),
-				'Writer'	=> str_replace(' /', ',', $imdb['getWriter']['value']),
-				'Actors'	=> str_replace(' /', ',', $imdb['getCast']['value']),
-				'Plot'		=> str_replace(' /', ',', $imdb['getDescription']['value']),
-				'Language'	=> str_replace(' /', ',', $imdb['getLanguage']['value']),
-				'Country'	=> $imdb['getLocation']['value'],
-				'Awards'	=> str_replace(' /', ',', $imdb['getAwards']['value']),
-				'Poster'	=> $imdb['getPoster']['value'],
-				'Ratings'	=> '',
-				'Metascore'	=> '',
-				'imdbRating'=> $imdb['getRating']['value'],
-				'imdbVotes'	=> $imdb['getRatingCount']['value'],
-				'imdbID'	=> $imdbid,
-				'Type'	=> '',
-				'Production'	=> $imdb['getCompany']['value'],
-			);
+			if($value == 'N/A')
+			{
+				$omdb_data[$key] = '';
+			}
 		}
 
-		return $media;
+		// We get some alternative data because the OMDB data might be incomplete
+		include_once MYBB_ROOT.'inc/plugins/ougc_mediainfo/imdb.class.php';
+
+		$imdb = new IMDB($imdbid);
+
+		$imdb = $imdb->getAll();
+
+		$imdb_data = array(
+			'Title'		=> $imdb['getTitle']['value'],
+			'Year'		=> $imdb['getYear']['value'],
+			'Rated'		=> $imdb['getMpaa']['value'],
+			'Released'	=> $imdb['getReleaseDate']['value'],
+			'Runtime'	=> $imdb['getRuntime']['value'],
+			'Genre'		=> str_replace(' /', ',', $imdb['getGenre']['value']),
+			'Director'	=> str_replace(' /', ',', $imdb['getDirector']['value']),
+			'Writer'	=> str_replace(' /', ',', $imdb['getWriter']['value']),
+			'Actors'	=> str_replace(' /', ',', $imdb['getCast']['value']),
+			'Plot'		=> str_replace(' /', ',', $imdb['getDescription']['value']),
+			'Language'	=> str_replace(' /', ',', $imdb['getLanguage']['value']),
+			'Country'	=> $imdb['getLocation']['value'],
+			'Awards'	=> str_replace(' /', ',', $imdb['getAwards']['value']),
+			'Poster'	=> $imdb['getPoster']['value'],
+			'Ratings'	=> '',
+			'Metascore'	=> '',
+			'imdbRating'=> $imdb['getRating']['value'],
+			'imdbVotes'	=> $imdb['getRatingCount']['value'],
+			'imdbID'	=> $imdbid,
+			'Type'	=> '',
+			'Production'	=> $imdb['getCompany']['value'],
+		);
+
+		foreach($imdb_data as $key => $value)
+		{
+			if(empty($omdb_data[$key]))
+			{
+				$omdb_data[$key] = $value;
+			}
+		}
+
+		return $omdb_data;
 	}
 
 	function insert_data($imdbid, $data)
@@ -1143,6 +1249,72 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 				$db->delete_query('ougc_mediainfo', "imdbid='{$imdbid}'");
 			}
 		}
+	}
+
+	function get_imdbid($string)
+	{
+		preg_match('#^https://(?:www\.)?imdb\.com/title/(tt\\d{7,8})/$#', $string, $match);
+
+		if(empty($match[1]))
+		{
+			preg_match('/tt\\d{7,8}/', $string, $match);
+
+			$imdbid = $match[0];
+		}
+		else
+		{
+			$imdbid = $match[1];
+		}
+
+		if(empty($imdbid))
+		{
+			return false;
+		}
+
+		return (string)$imdbid;
+	}
+}
+
+// control_object by Zinga Burga from MyBBHacks ( mybbhacks.zingaburga.com ), 1.62
+if(!function_exists('control_object'))
+{
+	function control_object(&$obj, $code)
+	{
+		static $cnt = 0;
+		$newname = '_objcont_'.(++$cnt);
+		$objserial = serialize($obj);
+		$classname = get_class($obj);
+		$checkstr = 'O:'.strlen($classname).':"'.$classname.'":';
+		$checkstr_len = strlen($checkstr);
+		if(substr($objserial, 0, $checkstr_len) == $checkstr)
+		{
+			$vars = array();
+			// grab resources/object etc, stripping scope info from keys
+			foreach((array)$obj as $k => $v)
+			{
+				if($p = strrpos($k, "\0"))
+				{
+					$k = substr($k, $p+1);
+				}
+				$vars[$k] = $v;
+			}
+			if(!empty($vars))
+			{
+				$code .= '
+					function ___setvars(&$a) {
+						foreach($a as $k => &$v)
+							$this->$k = $v;
+					}
+				';
+			}
+			eval('class '.$newname.' extends '.$classname.' {'.$code.'}');
+			$obj = unserialize('O:'.strlen($newname).':"'.$newname.'":'.substr($objserial, $checkstr_len));
+			if(!empty($vars))
+			{
+				$obj->___setvars($vars);
+			}
+		}
+		// else not a valid object or PHP serialize has changed
 	}
 }
 

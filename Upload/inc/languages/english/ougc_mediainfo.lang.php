@@ -56,3 +56,5 @@ $l['ougc_mediainfo_field_awards'] = 'Awards:';
 $l['ougc_mediainfo_field_type'] = 'Type:';
 $l['ougc_mediainfo_field_production'] = 'Production:';
 $l['ougc_mediainfo_field_ratings'] = 'Ratings:';
+
+$l['ougc_mediainfo_search'] = 'search IMDB threads only';
