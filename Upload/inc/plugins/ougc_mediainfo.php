@@ -651,7 +651,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		{
 			$imdbid = htmlspecialchars_uni($mybb->get_input('imdbid'));
 		}
-		elseif(isset($thread['imdbid']))
+		elseif(isset($thread['imdbid']) && !empty($thread['imdbid']))
 		{
 			$imdbid = htmlspecialchars_uni("https://www.imdb.com/title/{$thread['imdbid']}/");
 		}
@@ -887,11 +887,6 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if($full_search)
-		{
-			$mybb->input['postthread'] = 1;
-		}
-
 		if($mybb->input['forums'][0] != 'all')
 		{
 			if(is_array($mybb->input['forums']))
@@ -923,6 +918,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		{
 			return;
 		}
+
+		$mybb->input['postthread'] = 1;
 
 		$mybb->input['keywords'] = $imdbid;
 
@@ -1059,7 +1056,14 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		if($media['image'])
 		{
-			$image_source = $mybb->settings['bburl'].'/uploads/ougc_mediainfo/'.$media['image'];
+			if($mybb->settings['usecdn'] && !empty($mybb->settings['cdnurl']))
+			{
+				$image_source = $mybb->settings['cdnurl'].'/uploads/ougc_mediainfo/'.$media['image'];
+			}
+			else
+			{
+				$image_source = $mybb->settings['bburl'].'/uploads/ougc_mediainfo/'.$media['image'];
+			}
 		}
 		else
 		{
@@ -1077,11 +1081,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$omdb_data = json_decode($json, true);
 
-		if(empty($omdb_data['Response']))
+		if(empty($omdb_data['Error']) && $omdb_data['Response'] != 'False')
 		{
 			foreach($omdb_data as $key => $value)
 			{
-				if(strtolower($value) == 'n/a')
+				if(my_strtolower((string)$value) == 'n/a')
 				{
 					$omdb_data[$key] = '';
 				}
@@ -1125,7 +1129,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		foreach($imdb_data as $key => $value)
 		{
-			if(strtolower($value) == 'n/a')
+			if(my_strtolower((string)$value) == 'n/a')
 			{
 				$value = '';
 			}
@@ -1178,7 +1182,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		foreach($insert_data as $key => &$value)
 		{
-			if(strtolower($value) == 'n/a')
+			if(my_strtolower((string)$value) == 'n/a')
 			{
 				$value = '';
 			}
@@ -1203,7 +1207,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$images_path = MYBB_ROOT.'uploads/ougc_mediainfo';
 
-		$ext = get_extension(my_strtolower($data['Poster']));
+		$ext = get_extension(my_strtolower((string)$data['Poster']));
 
 		if(!is_writable($images_path) || !in_array($ext, array('gif', 'png', 'jpg', 'jpeg', 'jpe')) || !function_exists('curl_init'))
 		{
@@ -1215,7 +1219,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		switch(my_strtolower($headers['Content-Type']))
+		switch(my_strtolower((string)$headers['Content-Type']))
 		{
 			case "image/gif":
 			case "image/jpeg":
