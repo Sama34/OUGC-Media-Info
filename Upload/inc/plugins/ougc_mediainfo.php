@@ -1163,7 +1163,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			'title'		=> $db->escape_string($data['Title']),
 			'year'		=> (int)$data['Year'],
 			'rated'		=> $db->escape_string($data['Rated']),
-			'released'	=> strtotime($data['Released']),
+			'released'	=> (int)strtotime($data['Released']),
 			'runtime'	=> $db->escape_string($data['Runtime']),
 			'genre'		=> $db->escape_string($data['Genre']),
 			'director'	=> $db->escape_string($data['Director']),
@@ -1216,7 +1216,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if(!($image = file_get_contents($data['Poster'])) || !($headers = get_headers($data['Poster'], 1)))
+		if(!($image = @file_get_contents($data['Poster'])) || !($headers = get_headers($data['Poster'], 1)))
 		{
 			return;
 		}
@@ -1292,6 +1292,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 	function get_imdbid($string)
 	{
+		$string = trim($string);
+
 		preg_match('#^https://(?:www\.)?imdb\.com/title/(tt\\d{7,8})/$#', $string, $match);
 
 		if(empty($match[1]))
