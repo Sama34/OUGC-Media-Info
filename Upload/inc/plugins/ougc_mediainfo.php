@@ -673,7 +673,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post)
+		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post || THIS_SCRIPT == 'xmlhttp.php')
 		{
 			return;
 		}
