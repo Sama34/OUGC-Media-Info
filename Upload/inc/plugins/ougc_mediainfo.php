@@ -682,7 +682,6 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$imdbid = '';
 
-		//_dump($thread['imdbid']);
 		if($mybb->request_method == 'post')
 		{
 			$imdbid = htmlspecialchars_uni($mybb->get_input('imdbid'));
@@ -718,11 +717,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$this->imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
-		if(empty($this->imdbid))
+		if(!$this->imdbid)
 		{
-			$tmdbid = $this->get_tmdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
+			$this->tmdbid = $this->get_tmdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
-			if(empty($tmdbid))
+			if(!$this->tmdbid)
 			{
 				$dh->set_error($lang->ougc_mediainfo_error_nomatch);
 	
@@ -730,7 +729,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			}
 			else
 			{
-				$dh->ougc_mediainfo = $this->get_tmdbmedia($tmdbid);
+				$dh->ougc_mediainfo = $this->get_tmdbmedia($this->tmdbid);
 			}
 		}
 		else
@@ -738,7 +737,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			$dh->ougc_mediainfo = $this->get_imdbmedia($this->imdbid);
 		}
 
-		if(empty($dh->ougc_mediainfo))
+		if(!$this->imdbid || empty($dh->ougc_mediainfo))
 		{
 			$dh->set_error($lang->ougc_mediainfo_error_apikey);
 
@@ -1138,6 +1137,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 	{
 		global $mybb;
 
+		if(!$this->imdbid)
+		{
+			$this->imdbid = $imdbid;
+		}
+
 		$json = file_get_contents("http://www.omdbapi.com/?i={$imdbid}&apikey={$mybb->settings['ougc_mediainfo_apikey']}");
 
 		$omdb_data = json_decode($json, true);
@@ -1218,14 +1222,34 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 	{
 		global $settings;
 
-		$url = "https://api.themoviedb.org/3/{$this->tmdb_type}/{$id}/external_ids?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+		if(!$this->tmdb_type)
+		{
+			$file = false;
 
-		$file = fetch_remote_file($url);
+			foreach(['movie', 'tv'] as $type)
+			{
+
+				$url = "https://api.themoviedb.org/3/{$type}/{$id}/external_ids?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+
+				if($file = fetch_remote_file($url))
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			$url = "https://api.themoviedb.org/3/{$this->tmdb_type}/{$id}/external_ids?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+
+			$file = fetch_remote_file($url);
+		}
 
 		if(!$file)
 		{
 			return;
 		}
+
+		$data = (array)json_decode($file, true);
 
 		$this->imdbid = (string)$data['imdb_id'];
 
@@ -1419,6 +1443,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 	function get_tmdbid_by_imdbid($imdbid)
 	{
 		global $settings;
+
+		if(!$this->imdbid)
+		{
+			$this->imdbid = $imdbid;
+		}
 
 		$url = "http://api.themoviedb.org/3/find/{$imdbid}?api_key={$settings['ougc_mediainfo_tmdbapikey']}&external_source=imdb_id";
 
