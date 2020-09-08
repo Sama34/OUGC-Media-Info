@@ -38,7 +38,9 @@ $l['ougc_mediainfo_pluginlibrary'] = 'This plugin requires <a href="{1}">PluginL
 $l['setting_ougc_mediainfo_forums'] = 'Allowed Forums';
 $l['setting_ougc_mediainfo_forums_desc'] = 'Select the forums where this this feature is enabled.';
 $l['setting_ougc_mediainfo_apikey'] = 'OMDb API';
-$l['setting_ougc_mediainfo_apikey_desc'] = 'A OMDb API is required for this plugin to work. Please type your OMDb API key below.';
+$l['setting_ougc_mediainfo_apikey_desc'] = 'An OMDb API is required for this plugin to work. Please type your OMDb API key below.';
+$l['setting_ougc_mediainfo_tmdbapikey'] = 'TMDB API';
+$l['setting_ougc_mediainfo_tmdbapikey_desc'] = 'A TMDB API is required for users to be able to post TMDB links. Please type your OMDb API key below.';
 $l['setting_ougc_mediainfo_fields_thread'] = 'Fields to Display in Thread';
 $l['setting_ougc_mediainfo_fields_thread_desc'] = 'Select the fields to display in the show thread page.';
 $l['setting_ougc_mediainfo_fields_forumlist'] = 'Fields to Display in Forum List';

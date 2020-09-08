@@ -90,6 +90,12 @@ class OUGC_MediaInfo
 
 	public $remove_image = '';
 
+	public $tmdb_type = '';
+
+	public $tmdbid = 0;
+
+	public $imdbid = '';
+
 	function __construct()
 	{
 		global $plugins, $settings, $templatelist;
@@ -186,6 +192,12 @@ class OUGC_MediaInfo
 			'apikey'				=> array(
 			   'title'			=> $lang->setting_ougc_mediainfo_apikey,
 			   'description'	=> $lang->setting_ougc_mediainfo_apikey_desc,
+			   'optionscode'	=> 'text',
+			   'value'			=> ''
+			),
+			'tmdbapikey'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_tmdbapikey,
+			   'description'	=> $lang->setting_ougc_mediainfo_tmdbapikey_desc,
 			   'optionscode'	=> 'text',
 			   'value'			=> ''
 			),
@@ -367,10 +379,29 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			$plugins['mediainfo'] = $this->plugin_info['versioncode'];
 		}
 
-		/*~*~* RUN UPDATES START *~*~*/
 		$this->_db_verify_tables();
+
 		$this->_db_verify_columns();
+
 		$this->_db_verify_indexes();
+
+		/*~*~* RUN UPDATES START *~*~*/
+
+		global $db;
+
+		$query = $db->simple_select('ougc_mediainfo', 'mid,imdbid', "tmdbid=''");
+
+		while($thread = $db->fetch_array($query))
+		{
+			$this->get_tmdbid_by_imdbid($thread['imdbid']);
+
+			if(!$this->tmdbid)
+			{
+				continue;
+			}
+
+			$db->update_query('ougc_mediainfo', ['tmdbid' => $this->tmdbid], "mid='{$thread['mid']}'");
+		}
 
 		/*~*~* RUN UPDATES END *~*~*/
 
@@ -527,6 +558,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 				'imdbrating'	=> "float(4,2) UNSIGNED NOT NULL DEFAULT '0.00'",
 				'imdbvotes'		=> "int(10) NOT NULL DEFAULT '0'",
 				'imdbid'		=> "varchar(15) NOT NULL DEFAULT ''",
+				'tmdbid'		=> "int NOT NULL DEFAULT '0'",
 				'type'			=> "varchar(15) NOT NULL DEFAULT ''",
 				'production'	=> "varchar(50) NOT NULL DEFAULT ''",
 				'image'		=> "varchar(150) NOT NULL DEFAULT ''",
@@ -647,6 +679,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$imdbid = '';
 
+		//_dump($thread['imdbid']);
 		if($mybb->request_method == 'post')
 		{
 			$imdbid = htmlspecialchars_uni($mybb->get_input('imdbid'));
@@ -680,16 +713,27 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$this->load_language();
 
-		$imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
+		$this->imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
-		if(empty($imdbid))
+		if(empty($this->imdbid))
 		{
-			$dh->set_error($lang->ougc_mediainfo_error_nomatch);
+			$tmdbid = $this->get_tmdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
 
-			return;
+			if(empty($tmdbid))
+			{
+				$dh->set_error($lang->ougc_mediainfo_error_nomatch);
+	
+				return;
+			}
+			else
+			{
+				$dh->ougc_mediainfo = $this->get_tmdbmedia($tmdbid);
+			}
 		}
-
-		$dh->ougc_mediainfo = $this->get_media($imdbid);
+		else
+		{
+			$dh->ougc_mediainfo = $this->get_imdbmedia($this->imdbid);
+		}
 
 		if(empty($dh->ougc_mediainfo))
 		{
@@ -698,11 +742,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		$dh->data['imdbid'] = $imdbid;
+		$dh->data['imdbid'] = $this->imdbid;
 
 		if($plugins->current_hook == 'datahandler_post_validate_post')
 		{
-			$dh->thread_update_data['imdbid'] = $imdbid;
+			$dh->thread_update_data['imdbid'] = $this->imdbid;
 
 			$this->set_remove_media($thread['tid'], $thread['imdbid']);
 		}
@@ -914,7 +958,19 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			}
 		}
 
-		if(!($imdbid = $this->get_imdbid($mybb->get_input('keywords', MyBB::INPUT_STRING))))
+		$this->imdbid = $this->get_imdbid($mybb->get_input('keywords', MyBB::INPUT_STRING));
+
+		if(empty($this->imdbid))
+		{
+			$tmdbid = $this->get_tmdbid($mybb->get_input('keywords', MyBB::INPUT_STRING));
+
+			if(!empty($tmdbid))
+			{
+				$this->get_tmdbmedia($tmdbid);
+			}
+		}
+
+		if(!$this->imdbid)
 		{
 			return;
 		}
@@ -923,7 +979,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		$mybb->input['showresults'] = 'threads';
 
-		$mybb->input['keywords'] = $imdbid;
+		$mybb->input['keywords'] = $this->imdbid;
 
 		control_object($db, '
 			function query($string, $hide_errors=0, $write_query=0)
@@ -1075,7 +1131,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		return eval($templates->render('ougcmediainfo'));
 	}
 
-	function get_media($imdbid)
+	function get_imdbmedia($imdbid)
 	{
 		global $mybb;
 
@@ -1129,6 +1185,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			'Production'	=> $imdb['getCompany']['value'],
 		);
 
+		if(!$this->tmdbid)
+		{
+			$this->get_tmdbid_by_imdbid($imdbid);
+		}
+
 		foreach($imdb_data as $key => $value)
 		{
 			if(my_strtolower((string)$value) == 'n/a')
@@ -1148,6 +1209,24 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		}
 
 		return $omdb_data;
+	}
+
+	function get_tmdbmedia($id)
+	{
+		global $settings;
+
+		$url = "https://api.themoviedb.org/3/{$this->tmdb_type}/{$id}/external_ids?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+
+		$file = fetch_remote_file($url);
+
+		if(!$file)
+		{
+			return;
+		}
+
+		$this->imdbid = (string)$data['imdb_id'];
+
+		return $this->get_imdbmedia($this->imdbid);
 	}
 
 	function insert_data($imdbid, $data)
@@ -1179,7 +1258,8 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			'imdbrating'=> (float)$data['imdbRating'],
 			'imdbvotes'	=> (int)str_replace(',', '', (string)$data['imdbVotes']),
 			'type'		=> $db->escape_string($data['Type']),
-			'production'=> $db->escape_string($data['Production'])
+			'production'=> $db->escape_string($data['Production']),
+			'tmdbID'	=> $this->tmdbid
 		);
 
 		foreach($insert_data as $key => &$value)
@@ -1312,7 +1392,46 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return false;
 		}
 
-		return (string)$imdbid;
+		$this->imdbid = (string)$imdbid;
+
+		return $this->imdbid;
+	}
+
+	function get_tmdbid($string)
+	{
+		$string = trim($string);
+
+		preg_match('#themoviedb.org/(movie|tv)/(\\d+)($|-)#i', $string, $match);
+
+		if($match)
+		{
+			$this->tmdb_type = (string)$match[1];
+
+			return (int)$match[2];
+		}
+
+		return false;
+	}
+
+	function get_tmdbid_by_imdbid($imdbid)
+	{
+		global $settings;
+
+		$url = "http://api.themoviedb.org/3/find/{$imdbid}?api_key={$settings['ougc_mediainfo_tmdbapikey']}&external_source=imdb_id";
+
+		if($file = fetch_remote_file($url))
+		{
+			$data = (array)json_decode($file, true);
+		}
+
+		$this->tmdbid = (int)$data['movie_results'][0]['id'];
+
+		if(!$this->tmdbid)
+		{
+			return false;
+		}
+
+		$this->get_tmdbmedia($this->tmdbid);
 	}
 }
 

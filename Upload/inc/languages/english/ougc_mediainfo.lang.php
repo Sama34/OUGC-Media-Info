@@ -32,8 +32,8 @@ $l['setting_group_ougc_mediainfo'] = 'OUGC Media Info';
 
 // Front-end
 $l['ougc_mediainfo_input'] = 'IMDB Link';
-$l['ougc_mediainfo_input_desc'] = 'Insert the the IMDB link to the media you want to embed. Example: <code>https://www.imdb.com/title/tt4154796/</code>';
-$l['ougc_mediainfo_input_placeholder'] = 'https://www.imdb.com/title/tt4154796/';
+$l['ougc_mediainfo_input_desc'] = 'Insert the IMDB or TMDB link to the media you want to embed. Example: <code>https://www.imdb.com/title/tt4154796/</code> or <code>https://www.themoviedb.org/movie/862-toy-story</code>';
+$l['ougc_mediainfo_input_placeholder'] = 'Insert IMDB or TMDB link...';
 
 $l['ougc_mediainfo_error_nomatch'] = 'The IMDB link doesn\'s match the pattern. Please verify the provided IMDB link.';
 $l['ougc_mediainfo_error_apikey'] = 'There was an error fetching the necessary data from the OMDb database. Please contact a moderator or administrator.';
@@ -57,4 +57,4 @@ $l['ougc_mediainfo_field_type'] = 'Type:';
 $l['ougc_mediainfo_field_production'] = 'Production:';
 $l['ougc_mediainfo_field_ratings'] = 'Ratings:';
 
-$l['ougc_mediainfo_search'] = 'search IMDB threads only';
+$l['ougc_mediainfo_search'] = 'search IMDB or TMDB threads only';
