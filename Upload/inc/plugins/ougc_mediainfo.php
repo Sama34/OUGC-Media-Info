@@ -164,8 +164,8 @@ class OUGC_MediaInfo
 			'website'		=> 'https://ougc.network',
 			'author'		=> 'Omar G.',
 			'authorsite'	=> 'https://ougc.network',
-			'version'		=> '1.8.0',
-			'versioncode'	=> 1800,
+			'version'		=> '1.8.1',
+			'versioncode'	=> 1810,
 			'compatibility'	=> '18*',
 			'codename'		=> 'ougc_mediainfo',
 			'pl'			=> array(
@@ -387,20 +387,23 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		/*~*~* RUN UPDATES START *~*~*/
 
-		global $db;
-
-		$query = $db->simple_select('ougc_mediainfo', 'mid,imdbid', "tmdbid=''");
-
-		while($thread = $db->fetch_array($query))
+		if($plugins['mediainfo'] <= 1810)
 		{
-			$this->get_tmdbid_by_imdbid($thread['imdbid']);
-
-			if(!$this->tmdbid)
+			global $db;
+	
+			$query = $db->simple_select('ougc_mediainfo', 'mid,imdbid', "tmdbid=''");
+	
+			while($thread = $db->fetch_array($query))
 			{
-				continue;
+				$this->get_tmdbid_by_imdbid($thread['imdbid']);
+	
+				if(!$this->tmdbid)
+				{
+					continue;
+				}
+	
+				$db->update_query('ougc_mediainfo', ['tmdbid' => $this->tmdbid], "mid='{$thread['mid']}'");
 			}
-
-			$db->update_query('ougc_mediainfo', ['tmdbid' => $this->tmdbid], "mid='{$thread['mid']}'");
 		}
 
 		/*~*~* RUN UPDATES END *~*~*/
