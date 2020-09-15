@@ -553,7 +553,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 				'actors'		=> "text NULL",
 				'plot'			=> "text NULL",
 				'language'		=> "varchar(100) NOT NULL DEFAULT ''",
-				'country'		=> "varchar(50) NOT NULL DEFAULT ''",
+				'country'		=> "varchar(150) NOT NULL DEFAULT ''",
 				'awards'		=> "varchar(150) NOT NULL DEFAULT ''",
 				'poster'		=> "varchar(200) NOT NULL DEFAULT ''",
 				'ratings'		=> "text NULL",
@@ -708,7 +708,7 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post || THIS_SCRIPT == 'xmlhttp.php')
+		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post || in_array(THIS_SCRIPT, array('xmlhttp.php', 'newreply.php')))
 		{
 			return;
 		}
