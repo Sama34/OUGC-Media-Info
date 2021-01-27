@@ -255,6 +255,18 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			   'optionscode'	=> 'yesno',
 			   'value'			=> 1
 			),
+			'fetchfrommessage'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_fetchfrommessage,
+			   'description'	=> $lang->setting_ougc_mediainfo_fetchfrommessage_desc,
+			   'optionscode'	=> 'yesno',
+			   'value'			=> 0
+			),
+			'forceinput'				=> array(
+			   'title'			=> $lang->setting_ougc_mediainfo_forceinput,
+			   'description'	=> $lang->setting_ougc_mediainfo_forceinput_desc,
+			   'optionscode'	=> 'yesno',
+			   'value'			=> 1
+			),
 		));
 
 		// Insert template/group
@@ -668,12 +680,11 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 	{
 		global $mybb, $fid, $templates, $ougc_mediainfo_input, $lang, $thread, $pid;
 
-		if(!is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $fid)))
-		{
-			return;
-		}
-
-		if($plugins->current_hook == 'editpost_end' && $pid != $thread['firstpost'])
+		if(
+			!is_member($mybb->settings['ougc_mediainfo_forums'], array('usergroup' => $fid)) ||
+			($plugins->current_hook == 'editpost_end' && $pid != $thread['firstpost']) ||
+			$mybb->settings['ougc_mediainfo_fetchfrommessage']
+		)
 		{
 			return;
 		}
@@ -694,11 +705,6 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		$ougc_mediainfo_input = eval($templates->render('ougcmediainfo_input'));
 	}
 
-	// Hook: 
-	function hook_()
-	{
-	}
-
 	function hook_datahandler_post_validate_post(&$dh)
 	{
 		global $mybb, $lang, $db, $plugins, $thread;
@@ -708,23 +714,47 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 			return;
 		}
 
-		if($plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post || in_array(THIS_SCRIPT, array('xmlhttp.php', 'newreply.php')))
+		$quickreply = in_array(THIS_SCRIPT, array('xmlhttp.php', 'newreply.php'));
+
+		if(
+			$plugins->current_hook == 'datahandler_post_validate_post' && !$dh->first_post ||
+			!$mybb->settings['ougc_mediainfo_fetchfrommessage'] && $quickreply
+		)
 		{
 			return;
 		}
 
 		$this->load_language();
 
-		$this->imdbid = $this->get_imdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
+		if($mybb->settings['ougc_mediainfo_fetchfrommessage'])
+		{
+			if($quickreply)
+			{
+				$input_key = 'value';
+			}
+			else
+			{
+				$input_key = 'message';
+			}
+		}
+		else
+		{
+			$input_key = 'imdbid';
+		}
+
+		$this->imdbid = $this->get_imdbid($mybb->get_input($input_key, MyBB::INPUT_STRING));
 
 		if(!$this->imdbid)
 		{
-			$this->tmdbid = $this->get_tmdbid($mybb->get_input('imdbid', MyBB::INPUT_STRING));
+			$this->tmdbid = $this->get_tmdbid($mybb->get_input($input_key, MyBB::INPUT_STRING));
 
 			if(!$this->tmdbid)
 			{
-				$dh->set_error($lang->ougc_mediainfo_error_nomatch);
-	
+				if($mybb->settings['ougc_mediainfo_forceinput'])
+				{
+					$dh->set_error($lang->ougc_mediainfo_error_nomatch);
+				}
+		
 				return;
 			}
 			else
@@ -739,7 +769,10 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 
 		if(!$this->imdbid || empty($dh->ougc_mediainfo))
 		{
-			$dh->set_error($lang->ougc_mediainfo_error_apikey);
+			if($mybb->settings['ougc_mediainfo_forceinput'])
+			{
+				$dh->set_error($lang->ougc_mediainfo_error_apikey);
+			}
 
 			return;
 		}

@@ -65,3 +65,7 @@ $l['setting_ougc_mediainfo_fields_rated'] = 'Rate';
 $l['setting_ougc_mediainfo_fields_rating_list'] = 'Rating list';
 $l['setting_ougc_mediainfo_enablesearch'] = 'Enable Search';
 $l['setting_ougc_mediainfo_enablesearch_desc'] = 'Enable users to search by using the IMDB full URL or ID.';
+$l['setting_ougc_mediainfo_fetchfrommessage'] = 'Fetch From Message';
+$l['setting_ougc_mediainfo_fetchfrommessage_desc'] = 'Enable this to fetch the media link from the message field isntead of the custom thread field.';
+$l['setting_ougc_mediainfo_forceinput'] = 'Force Thread Media';
+$l['setting_ougc_mediainfo_forceinput_desc'] = 'Turn this on to force users to provide a media URL for threads. If disabled, media URLs will be optional.';
