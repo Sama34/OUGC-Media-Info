@@ -164,8 +164,8 @@ class OUGC_MediaInfo
 			'website'		=> 'https://ougc.network',
 			'author'		=> 'Omar G.',
 			'authorsite'	=> 'https://ougc.network',
-			'version'		=> '1.8.10',
-			'versioncode'	=> 1810,
+			'version'		=> '1.8.11',
+			'versioncode'	=> 1811,
 			'compatibility'	=> '18*',
 			'codename'		=> 'ougc_mediainfo',
 			'pl'			=> array(
