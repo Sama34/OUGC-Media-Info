@@ -40,52 +40,38 @@ function parse_message_end(&$message)
 
 	static $mediaCache = [];
 
-	do
-	{
-		$previous_message = $message;
+	preg_replace_callback(
+		'#\['.\OUGCMediaInfo\Core\myCodeTag().'\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
+		function ($matches) use (&$message) {
+			if(empty($matches[0]))
+			{
+				return;
+			}
 
-		preg_replace_callback(
-			'#\['.\OUGCMediaInfo\Core\myCodeTag().'\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
-			function ($matches) use (&$message) {
-				if(empty($matches[0]))
-				{
-					return;
-				}
+			\OUGCMediaInfo\ForumHooks\_helper_parse($message, $matches[1]);
+		},
+		$message,
+		-1,
+		$count
+	);
 
-				\OUGCMediaInfo\ForumHooks\_helper_parse($message, $matches[1]);
-			},
-			$message,
-			-1,
-			$count
-		);
+	preg_replace_callback(
+		'#\['.\OUGCMediaInfo\Core\myCodeTag().'=(.+?)\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
+		function ($matches) use (&$message) {
+			if(empty($matches[0]))
+			{
+				return;
+			}
 
-		preg_replace_callback(
-			'#\['.\OUGCMediaInfo\Core\myCodeTag().'=(.+?)\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
-			function ($matches) use (&$message) {
-				if(empty($matches[0]))
-				{
-					return;
-				}
-
-				\OUGCMediaInfo\ForumHooks\_helper_parse($message, $matches[2], $matches[1]);
-			},
-			$message,
-			-1,
-			$count
-		);
-
-		if(!$message)
-		{
-			$message = $previous_message;
-
-			break;
-		}
-	}
-
-	while($count || $count);
+			\OUGCMediaInfo\ForumHooks\_helper_parse($message, $matches[2], $matches[1]);
+		},
+		$message,
+		-1,
+		$countCustom
+	);
 }
 
-function _helper_parse(&$message, $imdbId, $myCode=0)
+function _helper_parse(&$message, $imdbId, $myCode=null)
 {
 	global $db, $templates, $theme, $cache, $lang;
 	global $ougc_mediainfo;
@@ -107,9 +93,16 @@ function _helper_parse(&$message, $imdbId, $myCode=0)
 
 	$categories = $cache->read('ougc_mediainfo_categories');
 
-	$categories = array_flip($categories);
+	if(!empty($categories))
+	{
+		$categories = array_flip($categories);
+	}
+	else
+	{
+		$categories = [];
+	}
 
-	if(!isset($categories[$myCode]))
+	if($myCode !== null && !isset($categories[$myCode]))
 	{
 		$myCode = 0;
 	}
@@ -120,7 +113,7 @@ function _helper_parse(&$message, $imdbId, $myCode=0)
 
 		$media = $mediaCacheData[$imdbId];
 
-		if($myCode !== 0 && !isset($mediaCacheCategoriesData[$myCode][$imdbId]))
+		if($myCode !== null && !isset($mediaCacheCategoriesData[$myCode][$imdbId]))
 		{
 			$cid = (int)$categories[$myCode];
 
@@ -146,7 +139,7 @@ function _helper_parse(&$message, $imdbId, $myCode=0)
 		return;
 	}
 
-	if($myCode === 0)
+	if($myCode === null)
 	{
 		$message = str_replace(
 			'['.\OUGCMediaInfo\Core\myCodeTag().']'.$imdbId.'[/'.\OUGCMediaInfo\Core\myCodeTag().']',

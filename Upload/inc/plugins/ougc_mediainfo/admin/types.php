@@ -61,15 +61,16 @@ $sub_tabs = [
 		'link' => \OUGCMediaInfo\Core\get_url(),
 		'description' => $lang->ougc_mediainfo_main_desc
 	],
-	'add' => [
-		'title' => $lang->ougc_mediainfo_add_title,
-		'link' => $addLink,
-		'description' => $lang->ougc_mediainfo_add_desc
-	],
 	'media' => [
 		'title' => $lang->ougc_mediainfo_media_title,
 		'link' => \OUGCMediaInfo\Core\build_url(['action' => 'media']),
 		'description' => $lang->ougc_mediainfo_media_desc
+	],
+	'add' => [
+		'title' => $lang->ougc_mediainfo_add_title,
+		'link' => $addLink,
+		'description' => $lang->ougc_mediainfo_add_desc,
+		'align' => 'right'
 	],
 ];
 
@@ -114,7 +115,8 @@ elseif($mybb->get_input('action') == 'add' || $mybb->get_input('action') == 'edi
 		$sub_tabs['edit'] = [
 			'title' => $lang->ougc_mediainfo_edit_title,
 			'link' => \OUGCMediaInfo\Core\build_url(['action' => 'edit', 'cid' => $cid]),
-			'description' => $lang->ougc_mediainfo_edit_desc
+			'description' => $lang->ougc_mediainfo_edit_desc,
+			'align' => 'right'
 		];
 	}
 
@@ -251,7 +253,8 @@ elseif($mybb->get_input('action') == 'media')
 			$sub_tabs['edit'] = [
 				'title' => $lang->ougc_mediainfo_edit_title,
 				'link' => \OUGCMediaInfo\Core\build_url(['action' => 'edit', 'mid' => $mid]),
-				'description' => $lang->ougc_mediainfo_edit_desc
+				'description' => $lang->ougc_mediainfo_edit_desc,
+				'align' => 'right'
 			];
 		}
 
@@ -461,7 +464,7 @@ elseif($mybb->get_input('action') == 'media')
 		$form_container->output_row(
 			$lang->ougc_mediainfo_form_media_released.' <em>*</em>',
 			$lang->ougc_mediainfo_form_media_released_desc,
-			$form->generate_numeric_field('released', $logbook['released'], ['min' => 0, 'max' => 2100])
+			$form->generate_numeric_field('released', $logbook['released'], ['min' => 0])
 		);
 
 		$form_container->output_row(

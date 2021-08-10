@@ -156,7 +156,7 @@ class OUGC_MediaInfo
 			{
 				if(THIS_SCRIPT == 'forumdisplay.php' || THIS_SCRIPT == 'showthread.php')
 				{
-					$templatelist .= ',ougcmediainfo_field, ougcmediainfo_rating, ougcmediainfo';
+					$templatelist .= ',ougcmediainfo_field, ougcmediainfo_description, ougcmediainfo_rating, ougcmediainfo, ougcmediainfo_postbit';
 				}
 				
 				if(THIS_SCRIPT == 'forumdisplay.php')
@@ -441,7 +441,14 @@ class OUGC_MediaInfo
 
 		$categories = $cache->read('ougc_mediainfo_categories');
 
-		$categories = array_flip($categories);
+		if(!empty($categories))
+		{
+			$categories = array_flip($categories);
+		}
+		else
+		{
+			$categories = [];
+		}
 
 		$tids = implode("','", array_map('intval', array_keys($args['tids'])));
 
@@ -461,30 +468,19 @@ class OUGC_MediaInfo
 			$imdbId = null;
 
 			preg_match(
-				'#\['.\OUGCMediaInfo\Core\myCodeTag().'\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
+				'#\['.\OUGCMediaInfo\Core\myCodeTag().'(.*?)\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
 				$thread['message'],
 				$matches,
 				PREG_OFFSET_CAPTURE
 			);
 
-			if(!empty($matches[1]) && !empty($matches[1][0]))
+			if(!empty($matches[1]) && !empty($matches[1][0]) && my_strpos($matches[1][0], '=') === 0)
 			{
-				$imdbId = ['imdbid' => $matches[1][0], 'mycode' => 0];
+				$imdbId = ['imdbid' => $matches[2][0], 'mycode' => (int)$categories[ltrim($matches[1][0], '=')]];
 			}
-
-			if(empty($imdbId))
+			elseif(!empty($matches[2][0]))
 			{
-				preg_match(
-					'#\['.\OUGCMediaInfo\Core\myCodeTag().'=(.+?)\](.+?)\[\/'.\OUGCMediaInfo\Core\myCodeTag().'\](\r\n?|\n?)#si',
-					$thread['message'],
-					$matches,
-					PREG_OFFSET_CAPTURE
-				);
-	
-				if(!empty($matches[1]) && !empty($matches[1][0]) && !empty($matches[2]) && !empty($matches[2][0]) && !empty($categories[$matches[1][0]]))
-				{
-					$imdbId = ['imdbid' => $matches[2][0], 'mycode' => (int)$categories[$matches[1][0]]];
-				}
+				$imdbId = ['imdbid' => $matches[2][0], 'mycode' => null];
 			}
 
 			if(!empty($imdbId))
@@ -552,7 +548,7 @@ class OUGC_MediaInfo
 				}
 			}
 
-			$imdbids = implode("','", $imdbids);
+			$imdbids = implode("','", array_merge($imdbids, array_map([$db, 'escape_string'], array_column($mediaInfoThreadsCache, 'imdbid'))));
 
 			$query = $db->simple_select('ougc_mediainfo', '*', "imdbid IN ('{$imdbids}')");
 
