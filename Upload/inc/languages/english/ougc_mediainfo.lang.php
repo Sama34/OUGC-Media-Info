@@ -27,7 +27,7 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
  
-// Plugin APIC
+// Plugin API
 $l['setting_group_ougc_mediainfo'] = 'OUGC Media Info';
 
 // Front-end
@@ -56,5 +56,6 @@ $l['ougc_mediainfo_field_awards'] = 'Awards:';
 $l['ougc_mediainfo_field_type'] = 'Type:';
 $l['ougc_mediainfo_field_production'] = 'Production:';
 $l['ougc_mediainfo_field_ratings'] = 'Ratings:';
+$l['ougc_mediainfo_field_description'] = 'Description:';
 
 $l['ougc_mediainfo_search'] = 'search IMDB or TMDB threads only';

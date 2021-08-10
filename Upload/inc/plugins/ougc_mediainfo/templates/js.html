@@ -1,0 +1,40 @@
+<script>
+	$(function() {
+		var moveLeft = 20;
+		var moveDown = 10;
+
+		$("[id^=ougcmediainfo_]").hover(function(e) {
+			id = $(this).attr('id');
+			tid = id.replace( /[^\d.]/g, '');
+
+			$('#ougcmediainfo_popup_' + tid).fadeIn(50)
+			.css('top', e.pageY + moveDown)
+			.css('left', e.pageX + moveLeft);
+			//.appendTo('body');
+			}, function() {
+				$('#ougcmediainfo_popup_' + tid).hide();
+			});
+
+			$('#ougcmediainfo_' + tid).mousemove(function(e) {
+			$('#ougcmediainfo_popup_' + tid).css('top', e.pageY + moveDown).css('left', e.pageX + moveLeft);
+		});
+	});
+	//https://codepen.io/thebalu/pen/NqErJO
+</script>
+<style>
+	*[id*='ougcmediainfo_popup_'] {
+		display: none;
+		position: absolute;
+		max-width: 25%;
+		left: 20%;
+	}
+
+	*[id*='ougcmediainfo_popup_'], *[id*='ougcmediainfo_popup_'] * {
+		font-size: 98%;
+	}
+
+	*[id*='ougcmediainfo_popup_'] img {
+		max-width: 100px !important;
+		max-height: 100px !important;
+	}
+</style>
