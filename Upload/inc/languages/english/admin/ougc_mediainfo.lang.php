@@ -75,6 +75,18 @@ $l['setting_ougc_mediainfo_mycodetag'] = 'MyCode Tag';
 $l['setting_ougc_mediainfo_mycodetag_desc'] = 'Select a custom MyCode tag to allow embed of media information in posts. Default is <code>mediainfo</code>';
 $l['setting_ougc_mediainfo_enablemanual'] = 'Enable Manual Input';
 $l['setting_ougc_mediainfo_enablemanual_desc'] = 'If disabled, only MyCode use will be allowed. This will require administrators to manually add media information into the DB.';
+$l['setting_ougc_mediainfo_posterimage'] = 'Default Poster Image';
+$l['setting_ougc_mediainfo_posterimage_desc'] = 'This applies only when using the IMDB or TMDB API features.';
+$l['setting_ougc_mediainfo_posterimage_imdb'] = 'Default IMDB poster image.';
+$l['setting_ougc_mediainfo_posterimage_tmdb'] = 'Automatically select from TMDB poster images.';
+$l['setting_ougc_mediainfo_posterimage_height'] = 'TMDB Poster Image Maximum Height';
+$l['setting_ougc_mediainfo_posterimage_height_desc'] = 'Select the maximum height for the selected TMDB poster image.';
+$l['setting_ougc_mediainfo_posterimage_width'] = 'TMDB Poster Image Maximum Width';
+$l['setting_ougc_mediainfo_posterimage_width_desc'] = 'Select the maximum width for the selected TMDB poster image.';
+$l['setting_ougc_mediainfo_posterimage_size'] = 'TMDB Poster Image Size';
+$l['setting_ougc_mediainfo_posterimage_size_desc'] = 'Select the image size for the selected TMDB poster image. If not found will fallback to <code>original</code>.';
+$l['setting_ougc_mediainfo_storeimage'] = 'Store Poster Image';
+$l['setting_ougc_mediainfo_storeimage_desc'] = 'If disabled, images will not be stored in your local file system.';
 
 // Forms
 $l['ougc_mediainfo_main_menu'] = 'Media Info';

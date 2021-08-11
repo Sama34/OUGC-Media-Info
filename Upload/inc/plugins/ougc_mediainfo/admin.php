@@ -161,6 +161,44 @@ rating_list={$lang->setting_ougc_mediainfo_fields_rating_list}",
 		   'optionscode'	=> 'yesno',
 		   'value'			=> 1
 		),
+		'posterimage'				=> array(
+		   'title'			=> $lang->setting_ougc_mediainfo_posterimage,
+		   'description'	=> $lang->setting_ougc_mediainfo_posterimage_desc,
+		   'optionscode'	=> "radio
+imdb={$lang->setting_ougc_mediainfo_posterimage_imdb}
+tmdb={$lang->setting_ougc_mediainfo_posterimage_tmdb}",
+		   'value'			=> 'imdb'
+		),
+		'posterimage_height'				=> array(
+		   'title'			=> $lang->setting_ougc_mediainfo_posterimage_height,
+		   'description'	=> $lang->setting_ougc_mediainfo_posterimage_height_desc,
+		   'optionscode'	=> 'numeric',
+		   'value'			=> 800
+		),
+		'posterimage_width'				=> array(
+		   'title'			=> $lang->setting_ougc_mediainfo_posterimage_width,
+		   'description'	=> $lang->setting_ougc_mediainfo_posterimage_width_desc,
+		   'optionscode'	=> 'numeric',
+		   'value'			=> 600
+		),
+		'posterimage_size'				=> array(
+		   'title'			=> $lang->setting_ougc_mediainfo_posterimage_size,
+		   'description'	=> $lang->setting_ougc_mediainfo_posterimage_size_desc,
+		   'optionscode'	=> "radio
+original=original
+w92=w92
+w154=w154
+w342=w342
+w500=w500
+w780=w780",
+		   'value'			=> 'original'
+		),
+		'storeimage'				=> array(
+		   'title'			=> $lang->setting_ougc_mediainfo_storeimage,
+		   'description'	=> $lang->setting_ougc_mediainfo_storeimage_desc,
+		   'optionscode'	=> 'yesno',
+		   'value'			=> 1
+		),
 	));
 
 	// Add templates

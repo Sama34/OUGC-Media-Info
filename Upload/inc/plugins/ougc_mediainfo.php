@@ -116,6 +116,8 @@ class OUGC_MediaInfo
 
 	public $imdbid = '';
 
+	public $customPoster = '';
+
 	function __construct()
 	{
 		global $plugins, $settings, $templatelist;
@@ -944,6 +946,11 @@ class OUGC_MediaInfo
 			}
 		}
 
+		if(!empty($this->customPoster))
+		{
+			$omdb_data['Poster'] = $this->customPoster;
+		}
+
 		if(empty($omdb_data['Title']))
 		{
 			return false;
@@ -984,6 +991,44 @@ class OUGC_MediaInfo
 		}
 
 		$data = (array)json_decode($file, true);
+
+		if($settings['ougc_mediainfo_posterimage'] == 'tmdb')
+		{
+			$imagesUrl = "https://api.themoviedb.org/3/{$this->tmdb_type}/{$id}/images?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+
+			$imagesFile = fetch_remote_file($imagesUrl);
+
+			$imagesData = (array)json_decode($imagesFile, true);
+
+			if(is_array($imagesData['posters']))
+			{
+				$configUrl = "https://api.themoviedb.org/3/configuration?api_key={$settings['ougc_mediainfo_tmdbapikey']}";
+	
+				$configFile = fetch_remote_file($configUrl);
+	
+				$configData = (array)json_decode($configFile, true);
+
+				if(!empty($configData['images']))
+				{
+					$size = 'original';
+
+					if(in_array($settings['ougc_mediainfo_posterimage_size'], $configData['images']['poster_sizes']))
+					{
+						$size = $settings['ougc_mediainfo_posterimage_size'];	
+					}
+
+					foreach($imagesData['posters'] as $poster)
+					{
+						if($poster['height'] > $settings['ougc_mediainfo_posterimage_height'] || $poster['width'] > $settings['ougc_mediainfo_posterimage_width'])
+						{
+							continue;
+						}
+
+						$this->customPoster = "{$configData['images']['secure_base_url']}{$size}{$poster['file_path']}";
+					}
+				}
+			}
+		}
 
 		if(!empty($data['imdb_id']))
 		{
@@ -1080,7 +1125,7 @@ class OUGC_MediaInfo
 
 		$ext = get_extension(my_strtolower((string)$data['Poster']));
 
-		if(!is_writable($images_path) || !in_array($ext, array('gif', 'png', 'jpg', 'jpeg', 'jpe')) || !function_exists('curl_init'))
+		if(!$mybb->settings['ougc_mediainfo_storeimage'] || !is_writable($images_path) || !in_array($ext, array('gif', 'png', 'jpg', 'jpeg', 'jpe')) || !function_exists('curl_init'))
 		{
 			return;
 		}
