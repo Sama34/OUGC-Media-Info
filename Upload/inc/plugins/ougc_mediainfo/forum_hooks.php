@@ -109,32 +109,59 @@ function _helper_parse(&$message, $imdbId, $myCode=null)
 
 	if(!isset($mediaCache[$myCode][$imdbId]))
 	{
-		\OUGCMediaInfo\Core\load_language();
+		$fileName = $imdbId;
 
-		$media = $mediaCacheData[$imdbId];
-
-		if($myCode !== null && !isset($mediaCacheCategoriesData[$myCode][$imdbId]))
+		if($myCode)
 		{
-			$cid = (int)$categories[$myCode];
+			$fileName = "{$imdbId}_{$myCode}";
+		}
 
-			$mid = (int)$media['mid'];
+		$file = false;
 
-			$query = $db->simple_select('ougc_mediainfo_categories_data', '*', "cid='{$cid}' AND mid='{$mid}'");
+		if(file_exists(MYBB_ROOT."cache/imdb_data/{$fileName}.txt"))
+		{
+			$file = file_get_contents(MYBB_ROOT."cache/imdb_data/{$fileName}.txt");
+
+			if(!empty($file))
+			{
+				$mediaCache[$myCode][$imdbId] = $file;
+			}
+		}
+
+		if(empty($file))
+		{
+			$mediaCache[$myCode][$imdbId] = '';
 	
-			$mediaCacheCategoriesData[$myCode][$imdbId] = $db->fetch_array($query);
+			\OUGCMediaInfo\Core\load_language();
+	
+			$media = $mediaCacheData[$imdbId];
+	
+			if($myCode !== null && !isset($mediaCacheCategoriesData[$myCode][$imdbId]))
+			{
+				$cid = (int)$categories[$myCode];
+	
+				$mid = (int)$media['mid'];
+	
+				$query = $db->simple_select('ougc_mediainfo_categories_data', '*', "cid='{$cid}' AND mid='{$mid}'");
+		
+				$mediaCacheCategoriesData[$myCode][$imdbId] = $db->fetch_array($query);
+			}
+	
+			if(isset($mediaCacheCategoriesData[$myCode][$imdbId]))
+			{
+				$media = array_merge($media, $mediaCacheCategoriesData[$myCode][$imdbId]);
+			}
+
+			if(!empty($media))
+			{
+				$ougc_mediainfo_display = $ougc_mediainfo->render($media);
+		
+				$mediaCache[$myCode][$imdbId] = eval($templates->render('ougcmediainfo_postbit'));
+			}
 		}
-
-		if(isset($mediaCacheCategoriesData[$myCode][$imdbId]))
-		{
-			$media = array_merge($media, $mediaCacheCategoriesData[$myCode][$imdbId]);
-		}
-
-		$ougc_mediainfo_display = $ougc_mediainfo->render($media);
-
-		$mediaCache[$myCode][$imdbId] = eval($templates->render('ougcmediainfo_postbit'));
 	}
 
-	if(!isset($mediaCache[$myCode][$imdbId]))
+	if(empty($mediaCache[$myCode][$imdbId]))
 	{
 		return;
 	}

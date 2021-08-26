@@ -536,40 +536,62 @@ class OUGC_MediaInfo
 			return;
 		}
 
-		static $media_cache = null;
+		$fileName = $thread['imdbid'];
 
-		if($media_cache === null)
+		if($myCode)
 		{
-			$media_cache = $imdbids = array();
+			$fileName = "{$thread['imdbid']}_{$myCode}";
+		}
 
-			foreach($threadcache as $_thread)
+		$file = false;
+
+		if(file_exists(MYBB_ROOT."cache/imdb_data/{$fileName}_popup.txt"))
+		{
+			$file = file_get_contents(MYBB_ROOT."cache/imdb_data/{$fileName}_popup.txt");
+
+			if(!empty($file))
 			{
-				if(!empty($_thread['imdbid']))
+				$ougc_mediainfo_display = $file;
+			}
+		}
+
+		if(empty($file))
+		{
+			static $media_cache = null;
+	
+			if($media_cache === null)
+			{
+				$media_cache = $imdbids = array();
+	
+				foreach($threadcache as $_thread)
 				{
-					$imdbids[$_thread['imdbid']] = $db->escape_string($_thread['imdbid']);
+					if(!empty($_thread['imdbid']))
+					{
+						$imdbids[$_thread['imdbid']] = $db->escape_string($_thread['imdbid']);
+					}
+				}
+	
+				$imdbids = implode("','", array_merge($imdbids, array_map([$db, 'escape_string'], array_column($mediaInfoThreadsCache, 'imdbid'))));
+	
+				$query = $db->simple_select('ougc_mediainfo', '*', "imdbid IN ('{$imdbids}')");
+	
+				while($media = $db->fetch_array($query))
+				{
+					$media_cache[$media['imdbid']] = $media;
 				}
 			}
-
-			$imdbids = implode("','", array_merge($imdbids, array_map([$db, 'escape_string'], array_column($mediaInfoThreadsCache, 'imdbid'))));
-
-			$query = $db->simple_select('ougc_mediainfo', '*', "imdbid IN ('{$imdbids}')");
-
-			while($media = $db->fetch_array($query))
+	
+			$media = $media_cache[$thread['imdbid']];
+	
+			if($myCode && $mediaInfoThreadsCacheCustom[$myCode][$thread['imdbid']])
 			{
-				$media_cache[$media['imdbid']] = $media;
+				$media = array_merge($media, $mediaInfoThreadsCacheCustom[$myCode][$thread['imdbid']]);
 			}
+	
+			$media['title'] = htmlspecialchars_uni($media['title']);
+	
+			$ougc_mediainfo_display = $this->render($media);
 		}
-
-		$media = $media_cache[$thread['imdbid']];
-
-		if($myCode && $mediaInfoThreadsCacheCustom[$myCode][$thread['imdbid']])
-		{
-			$media = array_merge($media, $mediaInfoThreadsCacheCustom[$myCode][$thread['imdbid']]);
-		}
-
-		$media['title'] = htmlspecialchars_uni($media['title']);
-
-		$ougc_mediainfo_display = $this->render($media);
 
 		$ougc_mediainfo_popup = eval($templates->render('ougcmediainfo_popup'));
 
